@@ -306,55 +306,117 @@ export default function CreativesPage() {
         </div>
         );
       })() : (
-        <div className="cards-grid">
-          {creatives.map((c) => {
-            let perfClass = "";
-            if (c.analysis_status === "completed") {
+        <div className="cards-grid-v2">
+          {sortedCreatives.map((c) => {
+            // Compute performance score (0–100)
+            let score = 0;
+            if (c.analysis_status === "completed" && c.spend > 0) {
               if (goal === "roas") {
-                if (c.roas >= parseFloat(String(settings?.winner_roas_threshold ?? "2"))) perfClass = "creative-card--winner";
-                else if (c.roas < 1) perfClass = "creative-card--loser";
+                const threshold = parseFloat(String(settings?.winner_roas_threshold ?? "2"));
+                score = Math.min(100, Math.round((c.roas / Math.max(threshold, 0.01)) * 70));
               } else if (goal === "lead_gen") {
-                const cpaThreshold = parseFloat(String(settings?.winner_cpa_threshold ?? "30"));
-                if (c.cpa > 0 && c.cpa <= cpaThreshold) perfClass = "creative-card--winner";
-                else if (c.cpa > cpaThreshold * 2) perfClass = "creative-card--loser";
-              } else if (goal === "traffic") {
-                if (c.ctr >= 2) perfClass = "creative-card--winner";
-                else if (c.ctr < 0.5) perfClass = "creative-card--loser";
+                const threshold = parseFloat(String(settings?.winner_cpa_threshold ?? "30"));
+                score = c.cpa > 0
+                  ? Math.min(100, Math.round((1 - (c.cpa - threshold) / threshold) * 70 + 30))
+                  : 0;
+              } else {
+                score = Math.min(100, Math.round(c.ctr / 2 * 70 + 30));
               }
+              score = Math.max(0, Math.min(100, score));
             }
+            const scoreColor = score >= 70 ? "var(--teal)" : score >= 40 ? "var(--amber)" : "var(--red)";
+
+            // Metric status dots
+            const roasColor = c.roas >= 2 ? "var(--teal)" : c.roas >= 1 ? "var(--amber)" : "var(--red)";
+            const cpaThreshold = parseFloat(String(settings?.winner_cpa_threshold ?? "30"));
+            const cpaColor = c.cpa <= 0 ? "var(--text-muted)" : c.cpa <= cpaThreshold ? "var(--teal)" : c.cpa <= cpaThreshold * 2 ? "var(--amber)" : "var(--red)";
+            const ctrColor = c.ctr >= 2 ? "var(--teal)" : c.ctr >= 1 ? "var(--amber)" : "var(--red)";
+
             return (
             <div
               key={c._id}
-              className={`creative-card ${perfClass}`}
+              className="creative-card-v2"
               onClick={() => setSelectedId(c._id)}
             >
-              <div className="creative-card-img">
+              {/* Image */}
+              <div className="cc2-image">
                 {c.resolved_image_url ? (
                   <img src={c.resolved_image_url} alt="" />
                 ) : (
-                  <div className="creative-card-placeholder">
+                  <div className="cc2-placeholder">
                     {c.ad_type === "video" ? "▶" : "⬡"}
                   </div>
                 )}
-              </div>
-              <div className="creative-card-body">
-                <h4 className="creative-card-name">
-                  {(c.ad_name || "Untitled").slice(0, 40)}
-                </h4>
-                <div className="creative-card-metrics">
-                  <span>{fmt(c.spend)}</span>
-                  <span>
-                    {goal === "lead_gen"
-                      ? (c.cpa > 0 ? fmt(c.cpa) + "/lead" : "—")
-                      : goal === "traffic"
-                      ? (c.ctr ?? 0).toFixed(2) + "% CTR"
-                      : (c.roas ?? 0).toFixed(2) + "x ROAS"}
+                {c.ad_type === "video" && c.resolved_image_url && (
+                  <div className="cc2-play-overlay">▶</div>
+                )}
+                {c.ad_status && (
+                  <span className={`cc2-status-badge ${c.ad_status === "ACTIVE" ? "cc2-status-active" : ""}`}>
+                    {c.ad_status}
                   </span>
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="cc2-body">
+                <div className="cc2-title">
+                  <span className="cc2-type">{c.ad_type === "video" ? "Video" : "Static"}</span>
+                  <span className="cc2-sep">|</span>
+                  <span className="cc2-name">{(c.ad_name || "Untitled").slice(0, 45)}</span>
                 </div>
-                <div className="creative-card-tags">
-                  <span className="badge">{c.ad_type}</span>
-                  {c.funnel_stage && <span className="badge">{c.funnel_stage}</span>}
+
+                {/* Metrics */}
+                <div className="cc2-metrics">
+                  <div className="cc2-metric-row">
+                    <span className="cc2-metric-label">Spend</span>
+                    <span className="cc2-metric-value">{fmt(c.spend)}</span>
+                  </div>
+                  <div className="cc2-metric-row">
+                    <span className="cc2-metric-label">
+                      <span className="cc2-dot" style={{ background: roasColor }} />
+                      ROAS
+                    </span>
+                    <span className="cc2-metric-value">{(c.roas ?? 0).toFixed(2)}x</span>
+                  </div>
+                  <div className="cc2-metric-row">
+                    <span className="cc2-metric-label">
+                      <span className="cc2-dot" style={{ background: cpaColor }} />
+                      CPA
+                    </span>
+                    <span className="cc2-metric-value">{c.cpa > 0 ? fmt(c.cpa) : "—"}</span>
+                  </div>
+                  <div className="cc2-metric-row">
+                    <span className="cc2-metric-label">
+                      <span className="cc2-dot" style={{ background: ctrColor }} />
+                      CTR
+                    </span>
+                    <span className="cc2-metric-value">{(c.ctr ?? 0).toFixed(2)}%</span>
+                  </div>
                 </div>
+
+                {/* Score bar */}
+                {c.analysis_status === "completed" && (
+                  <div className="cc2-score">
+                    <div className="cc2-score-header">
+                      <span className="cc2-score-label">Performance</span>
+                      <span className="cc2-score-value" style={{ color: scoreColor }}>{score}</span>
+                    </div>
+                    <div className="cc2-score-track">
+                      <div
+                        className="cc2-score-fill"
+                        style={{ width: `${score}%`, background: scoreColor }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Tags */}
+                {c.funnel_stage && (
+                  <div className="cc2-tags">
+                    <span className="badge badge-cyan">{c.funnel_stage}</span>
+                    {c.messaging_angle && <span className="badge badge-teal">{c.messaging_angle}</span>}
+                  </div>
+                )}
               </div>
             </div>
             );
