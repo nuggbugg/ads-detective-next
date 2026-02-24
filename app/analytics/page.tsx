@@ -16,48 +16,54 @@ function useCurrencyFormatter() {
   };
 }
 
-type TabView = "win-rates" | "kill-scale" | "priorities";
+function formatCompact(amount: number, fmt: (n: number, d?: number) => string) {
+  if (amount >= 1000000) return fmt(amount / 1000000, 1).replace(/\.0$/, "") + "M";
+  if (amount >= 1000) return fmt(amount / 1000, 1).replace(/\.0$/, "") + "k";
+  return fmt(amount, 0);
+}
 
 export default function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<TabView>("win-rates");
   const winRatesData = useQuery(api.analytics.winRates, {});
   const killScaleData = useQuery(api.analytics.killScale, {});
   const prioritiesData = useQuery(api.analytics.iterationPriorities, {});
   const fmt = useCurrencyFormatter();
 
+  // Accordion collapse state
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // Win rate stage tabs
+  const [activeStage, setActiveStage] = useState<string | null>(null);
+
   if (!winRatesData || !killScaleData || !prioritiesData) return <PageLoader />;
 
-  const hasData = Object.keys(winRatesData.stages).length > 0;
+  const stages = winRatesData.stages as Record<string, {
+    total: number; winners: number; win_rate: number;
+    headline_metric: { label: string; formatted: string };
+    total_spend: number;
+    creatives: Array<{
+      _id: string; ad_name?: string; score: number;
+      primary_metric: string; secondary_metric: string;
+      spend: number; image_url?: string | null; ad_type?: string;
+    }>;
+  }>;
+
+  const goal = winRatesData.goal || "roas";
+  const hasData = Object.keys(stages).length > 0;
+  const goalLabel = goal === "lead_gen" ? "Lead Gen (CPA)" : goal === "traffic" ? "Traffic (CTR)" : "Purchase ROAS";
+
+  const stageEntries = Object.entries(stages);
+  const currentStage = activeStage || (stageEntries.length > 0 ? stageEntries[0][0] : null);
+
+  const toggle = (section: string) => {
+    setCollapsed((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
 
   return (
     <div className="page-content">
       <div className="page-header">
         <h2>Analytics</h2>
-        <span className="dash-goal-badge">
-          {winRatesData.goal === "lead_gen" ? "Lead Gen" : winRatesData.goal === "traffic" ? "Traffic" : "ROAS"}
+        <span style={{ marginLeft: 12, fontSize: 13, color: "var(--text-muted)" }}>
+          Goal: {goalLabel}
         </span>
-      </div>
-
-      {/* Sub-tabs */}
-      <div className="analytics-tabs">
-        <button
-          className={`analytics-tab ${activeTab === "win-rates" ? "active" : ""}`}
-          onClick={() => setActiveTab("win-rates")}
-        >
-          Win Rates
-        </button>
-        <button
-          className={`analytics-tab ${activeTab === "kill-scale" ? "active" : ""}`}
-          onClick={() => setActiveTab("kill-scale")}
-        >
-          Kill / Scale
-        </button>
-        <button
-          className={`analytics-tab ${activeTab === "priorities" ? "active" : ""}`}
-          onClick={() => setActiveTab("priorities")}
-        >
-          Iteration Priorities
-        </button>
       </div>
 
       {!hasData ? (
@@ -68,174 +74,193 @@ export default function AnalyticsPage() {
         />
       ) : (
         <>
-          {/* Win Rates */}
-          {activeTab === "win-rates" && (
-            <div className="analytics-section">
-              {Object.entries(winRatesData.stages as Record<string, {
-                total: number; winners: number; win_rate: number;
-                headline_metric: { label: string; formatted: string };
-                total_spend: number;
-                creatives: Array<{
-                  _id: string; ad_name?: string; score: number;
-                  primary_metric: string; secondary_metric: string;
-                  spend: number; image_url?: string | null; ad_type?: string;
-                }>;
-              }>).map(([stage, data]) => (
-                <div key={stage} className="analytics-stage-card">
-                  <div className="stage-header">
-                    <h3>{stage}</h3>
-                    <div className="stage-metrics">
-                      <span className="stage-win-rate">{data.win_rate}% win rate</span>
-                      <span className="stage-headline">{data.headline_metric.label}: {data.headline_metric.formatted}</span>
-                      <span className="cell-muted">{data.total} creatives &middot; {fmt(data.total_spend)} spent</span>
-                    </div>
-                  </div>
-                  <div className="table-wrapper">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: 48 }}></th>
-                          <th>Creative</th>
-                          <th>Score</th>
-                          <th>Primary</th>
-                          <th>Secondary</th>
-                          <th>Spend</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.creatives.slice(0, 10).map((c) => (
-                          <tr key={c._id}>
-                            <td>
-                              <div className="table-thumb">
-                                {c.image_url ? (
-                                  <img src={c.image_url} alt="" />
-                                ) : (
-                                  <span className="table-thumb-placeholder">
-                                    {c.ad_type === "video" ? "▶" : "⬡"}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="cell-primary">{(c.ad_name || "Untitled").slice(0, 40)}</td>
-                            <td>
-                              <span className={`score-badge ${c.score >= 70 ? "score-winner" : c.score >= 40 ? "score-mid" : "score-low"}`}>
-                                {c.score}
-                              </span>
-                            </td>
-                            <td>{c.primary_metric}</td>
-                            <td className="cell-muted">{c.secondary_metric}</td>
-                            <td>{fmt(c.spend)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
+          {/* ═══ Win Rate Analysis ═══ */}
+          <div className="analytics-section">
+            <div
+              className={`section-header ${collapsed["win-rates"] ? "collapsed" : ""}`}
+              onClick={() => toggle("win-rates")}
+            >
+              <h3>Win Rate Analysis</h3>
+              <svg className="section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
             </div>
-          )}
-
-          {/* Kill / Scale */}
-          {activeTab === "kill-scale" && (
-            <div className="analytics-section">
-              <div className="kill-scale-summary">
-                <div className="ks-stat ks-scale">
-                  <span className="ks-count">{killScaleData.summary.scale_count}</span>
-                  <span className="ks-label">Scale</span>
-                  <span className="ks-spend">{fmt(killScaleData.summary.scale_spend)}</span>
-                </div>
-                <div className="ks-stat ks-watch">
-                  <span className="ks-count">{killScaleData.summary.watch_count}</span>
-                  <span className="ks-label">Watch</span>
-                </div>
-                <div className="ks-stat ks-kill">
-                  <span className="ks-count">{killScaleData.summary.kill_count}</span>
-                  <span className="ks-label">Kill</span>
-                  <span className="ks-spend">{fmt(killScaleData.summary.kill_spend)}</span>
-                </div>
-              </div>
-
-              {[
-                { title: "Scale", items: killScaleData.scale, className: "category-scale" },
-                { title: "Watch", items: killScaleData.watch, className: "category-watch" },
-                { title: "Kill", items: killScaleData.kill, className: "category-kill" },
-              ].map(({ title, items, className }) => (
-                items.length > 0 && (
-                  <div key={title} className={`ks-section ${className}`}>
-                    <h3>{title} ({items.length})</h3>
-                    <div className="table-wrapper">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: 48 }}></th>
-                            <th>Creative</th>
-                            <th>Spend</th>
-                            <th>{winRatesData.goal === "lead_gen" ? "CPA" : winRatesData.goal === "traffic" ? "CTR" : "ROAS"}</th>
-                            <th>Rationale</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.slice(0, 15).map((c) => (
-                            <tr key={c._id}>
-                              <td>
-                                <div className="table-thumb">
-                                  {c.image_url ? (
-                                    <img src={c.image_url} alt="" />
-                                  ) : (
-                                    <span className="table-thumb-placeholder">
-                                      {c.ad_type === "video" ? "▶" : "⬡"}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="cell-primary">{(c.ad_name || "Untitled").slice(0, 40)}</td>
-                              <td>{fmt(c.spend)}</td>
-                              <td>
-                                {winRatesData.goal === "lead_gen"
-                                  ? (c.cpa > 0 ? fmt(c.cpa) : "—")
-                                  : winRatesData.goal === "traffic"
-                                  ? c.ctr.toFixed(2) + "%"
-                                  : c.roas.toFixed(2) + "x"}
-                              </td>
-                              <td className="cell-muted">{c.rationale}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+            <div className={`section-content ${collapsed["win-rates"] ? "collapsed" : ""}`}>
+              {stageEntries.length > 0 && (
+                <>
+                  <div className="win-rate-tabs">
+                    {stageEntries.map(([stage]) => (
+                      <button
+                        key={stage}
+                        className={`wr-tab ${stage === currentStage ? "active" : ""}`}
+                        onClick={() => setActiveStage(stage)}
+                      >
+                        {stage}
+                      </button>
+                    ))}
                   </div>
-                )
-              ))}
-            </div>
-          )}
 
-          {/* Iteration Priorities */}
-          {activeTab === "priorities" && (
-            <div className="analytics-section">
-              {prioritiesData.priorities.length === 0 ? (
-                <EmptyState
-                  title="No priorities yet"
-                  description="Analyze more creatives to see iteration priorities."
-                />
-              ) : (
-                <div className="priorities-list">
-                  {prioritiesData.priorities.map((p, i) => (
-                    <div key={i} className="priority-card">
-                      <div className="priority-header">
-                        <span className={`priority-type priority-type-${p.type}`}>
-                          {p.type === "angle_expansion" ? "Angle" : p.type === "hook_variation" ? "Hook" : "Optimize"}
-                        </span>
-                        <span className="priority-score">Impact: {p.score}</span>
+                  {stageEntries.map(([stage, data]) => (
+                    <div
+                      key={stage}
+                      className={`wr-panel ${stage === currentStage ? "" : "hidden"}`}
+                    >
+                      <div className="wr-summary">
+                        <div className="summary-stat">
+                          <div className="stat-value">{data.total}</div>
+                          <div className="stat-label">Total</div>
+                        </div>
+                        <div className="summary-stat">
+                          <div className="stat-value">{data.winners}</div>
+                          <div className="stat-label">Winners</div>
+                        </div>
+                        <div className="summary-stat">
+                          <div className="stat-value stat-highlight">{data.win_rate}%</div>
+                          <div className="stat-label">Win Rate</div>
+                        </div>
+                        <div className="summary-stat">
+                          <div className="stat-value">{data.headline_metric.formatted}</div>
+                          <div className="stat-label">{data.headline_metric.label}</div>
+                        </div>
+                        <div className="summary-stat">
+                          <div className="stat-value">{fmt(data.total_spend)}</div>
+                          <div className="stat-label">Total Spend</div>
+                        </div>
                       </div>
-                      <h4>{p.title}</h4>
-                      <p className="helper-text">{p.description}</p>
-                      <p className="priority-suggestion">{p.suggestion}</p>
+
+                      <div className="wr-list">
+                        {data.creatives.slice(0, 20).map((c) => (
+                          <div className="wr-item" key={c._id}>
+                            <div className="wr-item-score">
+                              <div className="score-bar" style={{ width: `${c.score}%` }} />
+                              <span className="score-value">{c.score}</span>
+                            </div>
+                            <div className="wr-item-info">
+                              <span className="wr-item-name">
+                                {(c.ad_name || "Untitled").slice(0, 40)}
+                              </span>
+                              <span className="wr-item-metrics">
+                                {c.primary_metric} | {c.secondary_metric} | {fmt(c.spend)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* ═══ Kill / Scale Recommendations ═══ */}
+          <div className="analytics-section">
+            <div
+              className={`section-header ${collapsed["kill-scale"] ? "collapsed" : ""}`}
+              onClick={() => toggle("kill-scale")}
+            >
+              <h3>Kill / Scale Recommendations</h3>
+              <svg className="section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
+            <div className={`section-content ${collapsed["kill-scale"] ? "collapsed" : ""}`}>
+              {killScaleData.summary && killScaleData.summary.total > 0 ? (
+                <>
+                  <div className="ks-summary">
+                    <span className="ks-stat ks-scale">
+                      {killScaleData.summary.scale_count} Scale ({formatCompact(killScaleData.summary.scale_spend, fmt)})
+                    </span>
+                    <span className="ks-stat ks-watch">
+                      {killScaleData.summary.watch_count} Watch
+                    </span>
+                    <span className="ks-stat ks-kill">
+                      {killScaleData.summary.kill_count} Kill ({formatCompact(killScaleData.summary.kill_spend, fmt)})
+                    </span>
+                  </div>
+
+                  <div className="ks-columns">
+                    {[
+                      { title: "Scale", items: killScaleData.scale, type: "scale" },
+                      { title: "Watch", items: killScaleData.watch, type: "watch" },
+                      { title: "Kill", items: killScaleData.kill, type: "kill" },
+                    ].map(({ title, items, type }) => (
+                      <div key={type} className="ks-column">
+                        <h4 className={`ks-column-title ks-${type}-title`}>{title}</h4>
+                        {items.length > 0 ? (
+                          items.slice(0, 10).map((c: any) => {
+                            const metricDisplay =
+                              goal === "lead_gen"
+                                ? c.cpa > 0 ? `${fmt(c.cpa)} CPA` : "No conversions"
+                                : goal === "traffic"
+                                ? `${c.ctr.toFixed(2)}% CTR`
+                                : `${c.roas.toFixed(2)}x`;
+                            return (
+                              <div key={c._id} className={`ks-card ks-card-${type}`}>
+                                <div className="ks-card-header">
+                                  <span className="ks-card-name">
+                                    {(c.ad_name || "Untitled").slice(0, 35)}
+                                  </span>
+                                  <span className="ks-card-roas">{metricDisplay}</span>
+                                </div>
+                                <div className="ks-card-metrics">
+                                  {fmt(c.spend)} spend | {c.ctr.toFixed(2)}% CTR
+                                </div>
+                                <p className="ks-card-rationale">{c.rationale}</p>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="cell-muted">None</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="cell-muted">No creatives with sufficient spend.</p>
+              )}
+            </div>
+          </div>
+
+          {/* ═══ Iteration Priorities ═══ */}
+          <div className="analytics-section">
+            <div
+              className={`section-header ${collapsed["priorities"] ? "collapsed" : ""}`}
+              onClick={() => toggle("priorities")}
+            >
+              <h3>Iteration Priorities</h3>
+              <svg className="section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
+            <div className={`section-content ${collapsed["priorities"] ? "collapsed" : ""}`}>
+              {prioritiesData.priorities.length > 0 ? (
+                <div className="priorities-list">
+                  {prioritiesData.priorities.slice(0, 15).map((p: any, i: number) => (
+                    <div key={i} className="priority-card">
+                      <div className="priority-rank">#{i + 1}</div>
+                      <div className="priority-info">
+                        <h4 className="priority-title">{p.title}</h4>
+                        <p className="priority-desc">{p.description}</p>
+                        <div className="priority-suggestion">
+                          <strong>Next test:</strong> {p.suggestion}
+                        </div>
+                      </div>
+                      <div className="priority-score">
+                        <div className="score-circle">{p.score}</div>
+                        <span>Impact</span>
+                      </div>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <p className="cell-muted">
+                  Need analyzed creatives with sufficient spend to generate priorities.
+                </p>
               )}
             </div>
-          )}
+          </div>
         </>
       )}
     </div>
