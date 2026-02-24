@@ -34,17 +34,21 @@ export default function CreativesPage() {
   const filterOptions = useQuery(api.creatives.getFilterOptions);
   const settings = useQuery(api.settings.getAll);
   const analyzeOne = useAction(api.analysis.analyzeOne);
+  const analyzeAll = useAction(api.analysis.analyzeUnanalyzed);
   const toast = useToast();
   const fmt = useCurrencyFormatter();
 
   const [selectedId, setSelectedId] = useState<Id<"creatives"> | null>(null);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [analyzingAll, setAnalyzingAll] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
   const selectedCreative = creatives?.find((c) => c._id === selectedId);
   const goal = typeof settings?.campaign_goal === "string" ? settings.campaign_goal : "roas";
 
   if (!creatives) return <PageLoader />;
+
+  const pendingCount = creatives?.filter((c) => c.analysis_status === "pending").length || 0;
 
   const handleAnalyze = async (id: Id<"creatives">) => {
     setAnalyzing(id);
@@ -55,6 +59,22 @@ export default function CreativesPage() {
       toast.error(err instanceof Error ? err.message : "Analysis failed");
     } finally {
       setAnalyzing(null);
+    }
+  };
+
+  const handleAnalyzeAll = async () => {
+    setAnalyzingAll(true);
+    try {
+      const result = await analyzeAll({ limit: 50 });
+      if (result.analyzed > 0) {
+        toast.success(`Analyzed ${result.analyzed} creatives${result.errors > 0 ? ` (${result.errors} errors)` : ""}`);
+      } else {
+        toast.info("No pending creatives to analyze");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Batch analysis failed");
+    } finally {
+      setAnalyzingAll(false);
     }
   };
 
@@ -75,6 +95,15 @@ export default function CreativesPage() {
       <div className="page-header">
         <h2>Creatives</h2>
         <div className="header-actions">
+          {pendingCount > 0 && (
+            <button
+              className="btn btn-secondary"
+              onClick={handleAnalyzeAll}
+              disabled={analyzingAll}
+            >
+              {analyzingAll ? "Analyzing..." : `Analyze All (${pendingCount})`}
+            </button>
+          )}
           <div className="view-toggle">
             <button
               className={`view-toggle-btn ${viewMode === "table" ? "active" : ""}`}

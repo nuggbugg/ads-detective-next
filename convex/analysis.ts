@@ -16,11 +16,14 @@ export const _analyzeOneImpl = internalAction({
     const apiKey = await ctx.runQuery(api.settings.get, { key: "gemini_api_key" });
     if (!apiKey) throw new Error("Gemini API key not configured");
 
-    // Get creative
+    // Get creative (includes resolved_image_url from storage)
     const creative = await ctx.runQuery(api.creatives.getById, { id });
     if (!creative) throw new Error("Creative not found");
 
-    // Run analysis
+    // Use stored image URL for visual analysis, fallback to thumbnail
+    const imageUrl = creative.resolved_image_url || creative.thumbnail_url || null;
+
+    // Run analysis (with image if available)
     const result = await analyzeCreative(apiKey, {
       ad_name: creative.ad_name,
       campaign_name: creative.campaign_name,
@@ -33,6 +36,7 @@ export const _analyzeOneImpl = internalAction({
       cpa: creative.cpa,
       impressions: creative.impressions,
       clicks: creative.clicks,
+      imageUrl,
     });
 
     // Update creative with analysis
@@ -65,13 +69,14 @@ export const analyzeOne = action({
   },
 });
 
-export const analyzeUnanalyzed = action({
+// Internal implementation (called by sync auto-analyze and cron)
+export const _analyzeUnanalyzedImpl = internalAction({
   args: {
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit }): Promise<{ analyzed: number; errors: number; total: number }> => {
     const apiKey = await ctx.runQuery(api.settings.get, { key: "gemini_api_key" });
-    if (!apiKey) throw new Error("Gemini API key not configured");
+    if (!apiKey) return { analyzed: 0, errors: 0, total: 0 };
 
     // Get pending creatives
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,6 +85,8 @@ export const analyzeUnanalyzed = action({
       (allCreatives as Array<{ _id: string; analysis_status: string }>)
         .filter((c) => c.analysis_status === "pending")
         .slice(0, limit || 50);
+
+    if (pending.length === 0) return { analyzed: 0, errors: 0, total: 0 };
 
     let analyzed = 0;
     let errors = 0;
@@ -95,5 +102,15 @@ export const analyzeUnanalyzed = action({
     }
 
     return { analyzed, errors, total: pending.length };
+  },
+});
+
+// Public wrapper for analyzeUnanalyzed (called from frontend)
+export const analyzeUnanalyzed = action({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit }): Promise<{ analyzed: number; errors: number; total: number }> => {
+    return await ctx.runAction(internal.analysis._analyzeUnanalyzedImpl, { limit }) as { analyzed: number; errors: number; total: number };
   },
 });

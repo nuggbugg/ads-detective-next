@@ -8,6 +8,23 @@ import {
   normalizeInsight,
 } from "./meta";
 
+// Helper: trigger auto-analysis of pending creatives after sync
+async function autoAnalyze(
+  ctx: { runAction: (ref: unknown, args: unknown) => Promise<unknown> },
+  label: string
+) {
+  try {
+    const result = await ctx.runAction(internal.analysis._analyzeUnanalyzedImpl, { limit: 50 });
+    const r = result as { analyzed: number; errors: number };
+    if (r.analyzed > 0) {
+      console.log(`[auto-analyze] ${label}: analyzed ${r.analyzed}, errors ${r.errors}`);
+    }
+  } catch (err) {
+    console.error(`[auto-analyze] ${label} failed:`, err);
+    // Non-fatal: sync still succeeded
+  }
+}
+
 // Internal implementation of syncAccount
 export const _syncAccountImpl = internalAction({
   args: {
@@ -111,6 +128,9 @@ export const _syncAccountImpl = internalAction({
       last_synced_at: new Date().toISOString(),
     });
 
+    // Auto-analyze pending creatives
+    await autoAnalyze(ctx as never, account.name);
+
     return { synced, account: account.name };
   },
 });
@@ -125,11 +145,17 @@ export const syncAccount = action({
   },
 });
 
-export const syncAll = action({
+// Internal syncAll (used by cron job)
+export const _syncAllImpl = internalAction({
   args: {},
   handler: async (ctx) => {
     const accounts = await ctx.runQuery(api.accounts.list, {});
     const activeAccounts = accounts.filter((a: { is_active: boolean }) => a.is_active);
+
+    if (activeAccounts.length === 0) {
+      console.log("[cron] No active accounts to sync");
+      return { results: [] };
+    }
 
     const results: Array<{ synced: number; account: string; error?: string }> = [];
     for (const account of activeAccounts) {
@@ -145,6 +171,18 @@ export const syncAll = action({
       }
     }
 
+    const totalSynced = results.reduce((s, r) => s + r.synced, 0);
+    const totalErrors = results.filter(r => r.error).length;
+    console.log(`[cron] Sync complete: ${totalSynced} creatives across ${results.length} accounts, ${totalErrors} errors`);
+
     return { results };
+  },
+});
+
+// Public wrapper for syncAll (called from frontend)
+export const syncAll = action({
+  args: {},
+  handler: async (ctx): Promise<{ results: Array<{ synced: number; account: string; error?: string }> }> => {
+    return await ctx.runAction(internal.sync._syncAllImpl, {}) as { results: Array<{ synced: number; account: string; error?: string }> };
   },
 });
