@@ -2001,6 +2001,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 500px;
+  max-height: 90vh;
 }
 
 .creative-modal-media {
@@ -2016,8 +2017,9 @@ body {
 .creative-modal-media img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  padding: 8px;
 }
 .creative-modal-placeholder {
   font-size: 48px;
