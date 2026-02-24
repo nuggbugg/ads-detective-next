@@ -188,19 +188,27 @@ export const winRates = query({
         headline_metric: headlineMetric,
         blended_roas: config.goal === "roas" ? headlineMetric.value : 0,
         total_spend: Math.round(totalSpend * 100) / 100,
-        creatives: scored.map((c) => ({
-          _id: c._id,
-          ad_name: c.ad_name,
-          score: c.score,
-          primary_metric: c.primary_metric,
-          secondary_metric: c.secondary_metric,
-          spend: c.spend,
-          roas: c.roas,
-          ctr: c.ctr,
-          cpa: c.cpa,
-          funnel_stage: c.funnel_stage,
-          messaging_angle: c.messaging_angle,
-          ad_type: c.ad_type,
+        creatives: await Promise.all(scored.map(async (c) => {
+          let image_url = c.thumbnail_url || null;
+          if (c.image_storage_id) {
+            const url = await ctx.storage.getUrl(c.image_storage_id);
+            if (url) image_url = url;
+          }
+          return {
+            _id: c._id,
+            ad_name: c.ad_name,
+            score: c.score,
+            primary_metric: c.primary_metric,
+            secondary_metric: c.secondary_metric,
+            spend: c.spend,
+            roas: c.roas,
+            ctr: c.ctr,
+            cpa: c.cpa,
+            funnel_stage: c.funnel_stage,
+            messaging_angle: c.messaging_angle,
+            ad_type: c.ad_type,
+            image_url,
+          };
         })),
       };
     }
@@ -308,17 +316,25 @@ export const killScale = query({
       ? (a: CategorizedCreative, b: CategorizedCreative) => b.ctr - a.ctr
       : (a: CategorizedCreative, b: CategorizedCreative) => b.roas - a.roas;
 
-    const mapItem = (c: CategorizedCreative) => ({
-      _id: c._id, ad_name: c.ad_name, category: c.category, rationale: c.rationale,
-      spend: c.spend, roas: c.roas, ctr: c.ctr, cpa: c.cpa, cpc: c.cpc, cpm: c.cpm,
-      ad_type: c.ad_type, funnel_stage: c.funnel_stage, messaging_angle: c.messaging_angle,
-    });
+    const mapItem = async (c: CategorizedCreative) => {
+      let image_url = c.thumbnail_url || null;
+      if (c.image_storage_id) {
+        const url = await ctx.storage.getUrl(c.image_storage_id);
+        if (url) image_url = url;
+      }
+      return {
+        _id: c._id, ad_name: c.ad_name, category: c.category, rationale: c.rationale,
+        spend: c.spend, roas: c.roas, ctr: c.ctr, cpa: c.cpa, cpc: c.cpc, cpm: c.cpm,
+        ad_type: c.ad_type, funnel_stage: c.funnel_stage, messaging_angle: c.messaging_angle,
+        image_url,
+      };
+    };
 
     return {
       goal: config.goal,
-      scale: scale.sort(sortFn).map(mapItem),
-      watch: watch.sort((a, b) => b.spend - a.spend).map(mapItem),
-      kill: kill.sort((a, b) => b.spend - a.spend).map(mapItem),
+      scale: await Promise.all(scale.sort(sortFn).map(mapItem)),
+      watch: await Promise.all(watch.sort((a, b) => b.spend - a.spend).map(mapItem)),
+      kill: await Promise.all(kill.sort((a, b) => b.spend - a.spend).map(mapItem)),
       summary: {
         total: creatives.length,
         scale_count: scale.length,

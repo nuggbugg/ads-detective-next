@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
                 creatives: Array<{
                   _id: string; ad_name?: string; score: number;
                   primary_metric: string; secondary_metric: string;
-                  spend: number;
+                  spend: number; image_url?: string | null; ad_type?: string;
                 }>;
               }>).map(([stage, data]) => (
                 <div key={stage} className="analytics-stage-card">
@@ -94,6 +94,7 @@ export default function AnalyticsPage() {
                     <table className="data-table">
                       <thead>
                         <tr>
+                          <th style={{ width: 48 }}></th>
                           <th>Creative</th>
                           <th>Score</th>
                           <th>Primary</th>
@@ -104,6 +105,17 @@ export default function AnalyticsPage() {
                       <tbody>
                         {data.creatives.slice(0, 10).map((c) => (
                           <tr key={c._id}>
+                            <td>
+                              <div className="table-thumb">
+                                {c.image_url ? (
+                                  <img src={c.image_url} alt="" />
+                                ) : (
+                                  <span className="table-thumb-placeholder">
+                                    {c.ad_type === "video" ? "▶" : "⬡"}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="cell-primary">{(c.ad_name || "Untitled").slice(0, 40)}</td>
                             <td>
                               <span className={`score-badge ${c.score >= 70 ? "score-winner" : c.score >= 40 ? "score-mid" : "score-low"}`}>
@@ -155,6 +167,7 @@ export default function AnalyticsPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
+                            <th style={{ width: 48 }}></th>
                             <th>Creative</th>
                             <th>Spend</th>
                             <th>{winRatesData.goal === "lead_gen" ? "CPA" : winRatesData.goal === "traffic" ? "CTR" : "ROAS"}</th>
@@ -164,6 +177,17 @@ export default function AnalyticsPage() {
                         <tbody>
                           {items.slice(0, 15).map((c) => (
                             <tr key={c._id}>
+                              <td>
+                                <div className="table-thumb">
+                                  {c.image_url ? (
+                                    <img src={c.image_url} alt="" />
+                                  ) : (
+                                    <span className="table-thumb-placeholder">
+                                      {c.ad_type === "video" ? "▶" : "⬡"}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
                               <td className="cell-primary">{(c.ad_name || "Untitled").slice(0, 40)}</td>
                               <td>{fmt(c.spend)}</td>
                               <td>

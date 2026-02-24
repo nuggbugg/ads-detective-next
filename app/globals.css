@@ -823,7 +823,7 @@ body {
   width: 36px; height: 36px; border-radius: 8px; overflow: hidden;
   flex-shrink: 0; background: #f0f0ea;
 }
-.table-thumb-img {
+.table-thumb img, .table-thumb-img {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
 .table-thumb-placeholder {
@@ -2311,6 +2311,13 @@ a { color: inherit; text-decoration: none; }
 /* --- Analytics Stage Cards --- */
 .analytics-stage-card {
   margin-bottom: 32px;
+  padding: 0 24px;
+}
+.analytics-stage-card:first-child {
+  padding-top: 24px;
+}
+.analytics-stage-card:last-child {
+  padding-bottom: 8px;
 }
 .stage-header {
   display: flex;
