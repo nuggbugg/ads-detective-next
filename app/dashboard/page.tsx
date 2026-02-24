@@ -175,8 +175,8 @@ export default function DashboardPage() {
                       {/* Podium — top 3 */}
                       {data.top_performers.length >= 3 ? (
                         <div className="podium">
-                          {[data.top_performers[1], data.top_performers[0], data.top_performers[2]].map((p, idx) => {
-                            const place = idx === 0 ? 2 : idx === 1 ? 1 : 3;
+                          {[data.top_performers[0], data.top_performers[1], data.top_performers[2]].map((p, idx) => {
+                            const place = idx + 1;
                             const cls = `podium-item podium-${place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"}`;
                             const metric = goal === "lead_gen"
                               ? `${fmt(p.cpa || 0)}/lead`
