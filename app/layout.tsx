@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "./ConvexClientProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TooltipProvider } from "@/components/ui/Tooltip";
-import TopBar from "@/components/layout/TopBar";
+import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
 import "./globals.css";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Ads Detective",
@@ -16,24 +19,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>
-        <ConvexClientProvider>
-          <ToastProvider>
-            <div id="app">
-              <TopBar />
-              <main className="app-main">
-                <div className="main-container">
-                  <div className="main-inner">
-                    {children}
-                  </div>
-                </div>
-              </main>
-            </div>
-            <TooltipProvider />
-          </ToastProvider>
-        </ConvexClientProvider>
-      </body>
-    </html>
+    <ConvexAuthNextjsServerProvider>
+      <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+        <body>
+          <ConvexClientProvider>
+            <ToastProvider>
+              <AuthenticatedLayout>
+                {children}
+              </AuthenticatedLayout>
+              <TooltipProvider />
+            </ToastProvider>
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </ConvexAuthNextjsServerProvider>
   );
 }

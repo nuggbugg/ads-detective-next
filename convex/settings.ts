@@ -1,5 +1,6 @@
 import { query, mutation, action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { CURRENCY_MAP } from "./lib/currency";
 
 function maskSecret(value: string): string {
@@ -21,6 +22,8 @@ const ALLOWED_KEYS = [
 export const getAll = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     const settings = await ctx.db.query("settings").collect();
     const result: Record<string, string> = {};
     for (const s of settings) {
@@ -55,6 +58,8 @@ export const get = internalQuery({
 export const setMany = mutation({
   args: { settings: v.record(v.string(), v.string()) },
   handler: async (ctx, { settings }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     for (const [key, value] of Object.entries(settings)) {
       if (!ALLOWED_KEYS.includes(key)) continue;
       const existing = await ctx.db
@@ -73,6 +78,8 @@ export const setMany = mutation({
 export const getCurrency = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     // Get the first active account's currency
     const account = await ctx.db
       .query("ad_accounts")
@@ -87,6 +94,8 @@ export const getCurrency = query({
 export const seedDefaults = mutation({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     const defaults: Record<string, string> = {
       meta_access_token: "",
       gemini_api_key: "",
@@ -111,7 +120,9 @@ export const seedDefaults = mutation({
 
 export const testMetaConnection = action({
   args: { token: v.string() },
-  handler: async (_ctx, { token }) => {
+  handler: async (ctx, { token }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     const API_BASE = "https://graph.facebook.com/v21.0";
 
     const authHeaders = { Authorization: `Bearer ${token}` };

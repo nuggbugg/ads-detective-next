@@ -1,9 +1,12 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
     const reports = await ctx.db.query("reports").order("desc").collect();
     // Return only the scalar fields needed by the list page.
     // Skip parsing top_performers, bottom_performers, comparison_data, etc.
@@ -28,6 +31,8 @@ export const list = query({
 export const getById = query({
   args: { id: v.id("reports") },
   handler: async (ctx, { id }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     const r = await ctx.db.get(id);
     if (!r) return null;
     return {
@@ -48,6 +53,8 @@ export const generate = mutation({
     account_id: v.optional(v.string()),
   },
   handler: async (ctx, { account_id }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     // Get creatives with delivery
     let creatives;
     if (account_id) {

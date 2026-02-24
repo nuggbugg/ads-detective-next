@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 const navItems = [
   {
@@ -75,7 +76,9 @@ const navItems = [
 
 export default function TopBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { signOut } = useAuthActions();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/" || pathname === "/dashboard";
@@ -123,6 +126,15 @@ export default function TopBar() {
                 {item.label}
               </Link>
             ))}
+            <button
+              className="nav-tab sign-out-btn"
+              onClick={() => { void signOut().then(() => router.push("/login")); }}
+              title="Sign out"
+            >
+              <svg className="nav-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
           </div>
         </div>
       </header>

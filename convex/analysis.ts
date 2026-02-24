@@ -1,6 +1,7 @@
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 import { analyzeCreative } from "./gemini";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,7 +18,7 @@ export const _analyzeOneImpl = internalAction({
     if (!apiKey) throw new Error("Gemini API key not configured");
 
     // Get creative (includes resolved_image_url from storage)
-    const creative = await ctx.runQuery(api.creatives.getById, { id });
+    const creative = await ctx.runQuery(internal.creatives._getById, { id });
     if (!creative) throw new Error("Creative not found");
 
     // Use stored image URL for visual analysis, fallback to thumbnail
@@ -40,7 +41,7 @@ export const _analyzeOneImpl = internalAction({
     });
 
     // Update creative with analysis
-    await ctx.runMutation(api.creatives.updateAnalysis, {
+    await ctx.runMutation(internal.creatives.updateAnalysis, {
       id,
       data: {
         asset_type: result.asset_type,
@@ -65,6 +66,8 @@ export const analyzeOne = action({
     id: v.id("creatives"),
   },
   handler: async (ctx, { id }): Promise<AnalysisResult> => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     return await ctx.runAction(internal.analysis._analyzeOneImpl, { id });
   },
 });
@@ -109,6 +112,8 @@ export const analyzeUnanalyzed = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit }): Promise<{ analyzed: number; errors: number; total: number }> => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     return await ctx.runAction(internal.analysis._analyzeUnanalyzedImpl, { limit }) as { analyzed: number; errors: number; total: number };
   },
 });

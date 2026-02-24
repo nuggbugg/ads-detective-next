@@ -1,6 +1,7 @@
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 import {
   fetchAdsWithInsights,
   fetchAds,
@@ -32,7 +33,7 @@ export const _syncAccountImpl = internalAction({
   },
   handler: async (ctx, { account_id }): Promise<{ synced: number; account: string }> => {
     // Get account
-    const account = await ctx.runQuery(api.accounts.getById, { id: account_id });
+    const account = await ctx.runQuery(internal.accounts._getById, { id: account_id });
     if (!account) throw new Error("Account not found");
 
     // Get token
@@ -67,7 +68,7 @@ export const _syncAccountImpl = internalAction({
     for (const insight of insights as Array<Record<string, unknown>>) {
       const normalized = normalizeInsight(insight, adsMap);
 
-      await ctx.runMutation(api.creatives.upsert, {
+      await ctx.runMutation(internal.creatives.upsert, {
         ad_id: normalized.ad_id,
         data: {
           account_id: account.meta_account_id,
@@ -113,7 +114,7 @@ export const _syncAccountImpl = internalAction({
       for (const [adId, blob] of imageBlobs) {
         const storageId = await ctx.storage.store(blob);
         // Use upsert to patch with image_storage_id
-        await ctx.runMutation(api.creatives.upsert, {
+        await ctx.runMutation(internal.creatives.upsert, {
           ad_id: adId,
           data: { image_storage_id: storageId },
         });
@@ -124,7 +125,7 @@ export const _syncAccountImpl = internalAction({
     }
 
     // Update last_synced_at
-    await ctx.runMutation(api.accounts.update, {
+    await ctx.runMutation(internal.accounts._update, {
       id: account_id,
       last_synced_at: new Date().toISOString(),
     });
@@ -142,6 +143,8 @@ export const syncAccount = action({
     account_id: v.id("ad_accounts"),
   },
   handler: async (ctx, { account_id }): Promise<{ synced: number; account: string }> => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     return await ctx.runAction(internal.sync._syncAccountImpl, { account_id });
   },
 });
@@ -150,7 +153,7 @@ export const syncAccount = action({
 export const _syncAllImpl = internalAction({
   args: {},
   handler: async (ctx) => {
-    const accounts = await ctx.runQuery(api.accounts.list, {});
+    const accounts = await ctx.runQuery(internal.accounts._list, {});
     const activeAccounts = accounts.filter((a: { is_active: boolean }) => a.is_active);
 
     if (activeAccounts.length === 0) {
@@ -184,6 +187,8 @@ export const _syncAllImpl = internalAction({
 export const syncAll = action({
   args: {},
   handler: async (ctx): Promise<{ results: Array<{ synced: number; account: string; error?: string }> }> => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Unauthenticated");
     return await ctx.runAction(internal.sync._syncAllImpl, {}) as { results: Array<{ synced: number; account: string; error?: string }> };
   },
 });

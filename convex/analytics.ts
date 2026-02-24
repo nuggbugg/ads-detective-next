@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { CURRENCY_MAP } from "./lib/currency";
 
 // ── Helpers ──
@@ -34,6 +35,8 @@ export const winRates = query({
     account_id: v.optional(v.string()),
   },
   handler: async (ctx, filters) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     // Read settings
     const settingsRows = await ctx.db.query("settings").collect();
     const settings: Record<string, string> = {};
@@ -207,6 +210,8 @@ export const killScale = query({
     account_id: v.optional(v.string()),
   },
   handler: async (ctx, filters) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     const settingsRows = await ctx.db.query("settings").collect();
     const settings: Record<string, string> = {};
     for (const s of settingsRows) settings[s.key] = s.value;
@@ -337,6 +342,8 @@ export const iterationPriorities = query({
     account_id: v.optional(v.string()),
   },
   handler: async (ctx, filters) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     const settingsRows = await ctx.db.query("settings").collect();
     const settings: Record<string, string> = {};
     for (const s of settingsRows) settings[s.key] = s.value;

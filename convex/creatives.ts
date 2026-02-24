@@ -1,5 +1,6 @@
-import { query, mutation, internalQuery } from "./_generated/server";
+import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const list = query({
   args: {
@@ -12,6 +13,8 @@ export const list = query({
     delivery: v.optional(v.string()),
   },
   handler: async (ctx, filters) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
     let creatives;
     if (filters.account_id) {
       creatives = await ctx.db
@@ -64,6 +67,8 @@ export const list = query({
 export const getFilterOptions = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     const creatives = await ctx.db.query("creatives").collect();
     const unique = (field: keyof (typeof creatives)[0]) =>
       [...new Set(creatives.map((c) => c[field]).filter(Boolean))] as string[];
@@ -85,6 +90,8 @@ export const getFilterOptions = query({
 export const getById = query({
   args: { id: v.id("creatives") },
   handler: async (ctx, { id }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return null;
     const creative = await ctx.db.get(id);
     if (!creative) return null;
 
@@ -97,7 +104,23 @@ export const getById = query({
   },
 });
 
-export const upsert = mutation({
+// Internal variant for analysis actions (no auth context)
+export const _getById = internalQuery({
+  args: { id: v.id("creatives") },
+  handler: async (ctx, { id }) => {
+    const creative = await ctx.db.get(id);
+    if (!creative) return null;
+
+    let resolvedImageUrl = creative.image_url || creative.thumbnail_url || null;
+    if (creative.image_storage_id) {
+      const url = await ctx.storage.getUrl(creative.image_storage_id);
+      if (url) resolvedImageUrl = url;
+    }
+    return { ...creative, resolved_image_url: resolvedImageUrl };
+  },
+});
+
+export const upsert = internalMutation({
   args: {
     ad_id: v.string(),
     data: v.any(),
@@ -124,7 +147,7 @@ export const upsert = mutation({
   },
 });
 
-export const updateAnalysis = mutation({
+export const updateAnalysis = internalMutation({
   args: {
     id: v.id("creatives"),
     data: v.object({
