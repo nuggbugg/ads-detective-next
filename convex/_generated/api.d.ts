@@ -15,6 +15,7 @@ import type * as creatives from "../creatives.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as gemini from "../gemini.js";
+import type * as lib_currency from "../lib/currency.js";
 import type * as meta from "../meta.js";
 import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   dashboard: typeof dashboard;
   gemini: typeof gemini;
+  "lib/currency": typeof lib_currency;
   meta: typeof meta;
   reports: typeof reports;
   settings: typeof settings;

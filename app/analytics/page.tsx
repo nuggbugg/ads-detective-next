@@ -168,7 +168,15 @@ export default function AnalyticsPage() {
               className={`section-header ${collapsed["kill-scale"] ? "collapsed" : ""}`}
               onClick={() => toggle("kill-scale")}
             >
-              <h3>Kill / Scale Recommendations</h3>
+              <h3>Kill / Scale Recommendations
+                {killScaleData && (
+                  <span style={{ marginLeft: 12, display: 'inline-flex', gap: 6, verticalAlign: 'middle' }}>
+                    {killScaleData.scale.length > 0 && <span className="badge badge-scale">{killScaleData.scale.length} Scale</span>}
+                    {killScaleData.watch.length > 0 && <span className="badge badge-watch">{killScaleData.watch.length} Watch</span>}
+                    {killScaleData.kill.length > 0 && <span className="badge badge-kill">{killScaleData.kill.length} Kill</span>}
+                  </span>
+                )}
+              </h3>
               <svg className="section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="m6 9 6 6 6-6" />
               </svg>
@@ -193,11 +201,10 @@ export default function AnalyticsPage() {
                       { title: "Scale", items: killScaleData.scale, type: "scale" },
                       { title: "Watch", items: killScaleData.watch, type: "watch" },
                       { title: "Kill", items: killScaleData.kill, type: "kill" },
-                    ].map(({ title, items, type }) => (
+                    ].filter(({ items }) => items.length > 0).map(({ title, items, type }) => (
                       <div key={type} className="ks-column">
                         <h4 className={`ks-column-title ks-${type}-title`}>{title}</h4>
-                        {items.length > 0 ? (
-                          items.slice(0, 10).map((c: any) => {
+                        {items.slice(0, 10).map((c: any) => {
                             const metricDisplay =
                               goal === "lead_gen"
                                 ? c.cpa > 0 ? `${fmt(c.cpa)} CPA` : "No conversions"
@@ -231,10 +238,7 @@ export default function AnalyticsPage() {
                                 <p className="ks-card-rationale">{c.rationale}</p>
                               </div>
                             );
-                          })
-                        ) : (
-                          <p className="cell-muted">None</p>
-                        )}
+                          })}
                       </div>
                     ))}
                   </div>

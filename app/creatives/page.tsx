@@ -32,6 +32,8 @@ export default function CreativesPage() {
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analyzingAll, setAnalyzingAll] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [sortBy, setSortBy] = useState<string>("spend");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const selectedCreative = creatives?.find((c) => c._id === selectedId);
   const goal = typeof settings?.campaign_goal === "string" ? settings.campaign_goal : "roas";
@@ -39,6 +41,28 @@ export default function CreativesPage() {
   if (!creatives) return <PageLoader />;
 
   const pendingCount = creatives?.filter((c) => c.analysis_status === "pending").length || 0;
+
+  const primaryMetricKey = goal === "lead_gen" ? "cpa" : goal === "traffic" ? "ctr" : "roas";
+  const toggleSort = (key: string) => {
+    if (sortBy === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortBy(key); setSortDir("desc"); }
+  };
+  const SortTh = ({ col, children }: { col: string; children: React.ReactNode }) => (
+    <th className="sortable-th" onClick={() => toggleSort(col)}>
+      {children}
+      <span className={`sort-indicator ${sortBy === col ? "active" : ""}`}>
+        {sortBy === col ? (sortDir === "asc" ? "▲" : "▼") : "▼"}
+      </span>
+    </th>
+  );
+  const sortedCreatives = [...creatives].sort((a, b) => {
+    const key = sortBy as keyof typeof a;
+    const rawA = a[key]; const rawB = b[key];
+    if (typeof rawA === "string" && typeof rawB === "string")
+      return sortDir === "asc" ? rawA.localeCompare(rawB) : rawB.localeCompare(rawA);
+    const av = Number(rawA ?? 0); const bv = Number(rawB ?? 0);
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
 
   const handleAnalyze = async (id: Id<"creatives">) => {
     setAnalyzing(id);
@@ -176,19 +200,19 @@ export default function CreativesPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Ad Name</th>
+                <SortTh col="ad_name">Ad Name</SortTh>
                 <th>Type</th>
-                <th>Spend</th>
-                <th>{goal === "lead_gen" ? "CPA" : goal === "traffic" ? "CTR" : "ROAS"}</th>
-                <th>CTR</th>
-                <th>Impressions</th>
+                <SortTh col="spend">Spend</SortTh>
+                <SortTh col={primaryMetricKey}>{goal === "lead_gen" ? "CPA" : goal === "traffic" ? "CTR" : "ROAS"}</SortTh>
+                <SortTh col="ctr">CTR</SortTh>
+                <SortTh col="impressions">Impressions</SortTh>
                 <th>Stage</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {creatives.map((c) => (
+              {sortedCreatives.map((c) => (
                 <tr key={c._id} onClick={() => setSelectedId(c._id)} style={{ cursor: "pointer" }}>
                   <td>
                     <div className="table-name-cell">
@@ -241,10 +265,25 @@ export default function CreativesPage() {
         </div>
       ) : (
         <div className="cards-grid">
-          {creatives.map((c) => (
+          {creatives.map((c) => {
+            let perfClass = "";
+            if (c.analysis_status === "completed") {
+              if (goal === "roas") {
+                if (c.roas >= parseFloat(String(settings?.winner_roas_threshold ?? "2"))) perfClass = "creative-card--winner";
+                else if (c.roas < 1) perfClass = "creative-card--loser";
+              } else if (goal === "lead_gen") {
+                const cpaThreshold = parseFloat(String(settings?.winner_cpa_threshold ?? "30"));
+                if (c.cpa > 0 && c.cpa <= cpaThreshold) perfClass = "creative-card--winner";
+                else if (c.cpa > cpaThreshold * 2) perfClass = "creative-card--loser";
+              } else if (goal === "traffic") {
+                if (c.ctr >= 2) perfClass = "creative-card--winner";
+                else if (c.ctr < 0.5) perfClass = "creative-card--loser";
+              }
+            }
+            return (
             <div
               key={c._id}
-              className="creative-card"
+              className={`creative-card ${perfClass}`}
               onClick={() => setSelectedId(c._id)}
             >
               <div className="creative-card-img">
@@ -276,7 +315,8 @@ export default function CreativesPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -363,16 +403,16 @@ export default function CreativesPage() {
                 <h4 className="creative-modal-section-title">AI Analysis</h4>
                 <div className="creative-modal-tags">
                   {[
-                    { label: "Asset Type", value: selectedCreative.asset_type },
-                    { label: "Visual Format", value: selectedCreative.visual_format },
-                    { label: "Messaging Angle", value: selectedCreative.messaging_angle },
-                    { label: "Hook Tactic", value: selectedCreative.hook_tactic },
-                    { label: "Offer Type", value: selectedCreative.offer_type },
-                    { label: "Funnel Stage", value: selectedCreative.funnel_stage },
+                    { label: "Asset Type", value: selectedCreative.asset_type, color: "badge-purple" },
+                    { label: "Visual Format", value: selectedCreative.visual_format, color: "badge-sky" },
+                    { label: "Messaging Angle", value: selectedCreative.messaging_angle, color: "badge-teal" },
+                    { label: "Hook Tactic", value: selectedCreative.hook_tactic, color: "badge-amber" },
+                    { label: "Offer Type", value: selectedCreative.offer_type, color: "badge-pink" },
+                    { label: "Funnel Stage", value: selectedCreative.funnel_stage, color: "badge-cyan" },
                   ].filter((t) => t.value).map((t) => (
                     <div key={t.label} className="creative-modal-tag-row">
                       <span className="cmt-label">{t.label}</span>
-                      <span className="badge">{t.value}</span>
+                      <span className={`badge ${t.color}`}>{t.value}</span>
                     </div>
                   ))}
                 </div>

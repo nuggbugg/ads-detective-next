@@ -18,9 +18,12 @@ function formatTimeAgo(iso: string) {
 
 export default function DashboardPage() {
   const data = useQuery(api.dashboard.get);
+  const settings = useQuery(api.settings.getAll);
   const fmt = useCurrencyFormatter();
 
   if (!data) return <PageLoader />;
+
+  const hasToken = !!settings?._has_meta_token;
 
   const m = data.metrics;
   const hasData = m.total_creatives > 0;
@@ -156,8 +159,8 @@ export default function DashboardPage() {
                   </div>
                   {data.top_performers.length > 0 ? (
                     <>
-                      {/* Podium — top 3 */}
-                      {data.top_performers.length >= 3 ? (
+                      {/* Podium — top 3 overview */}
+                      {data.top_performers.length >= 3 && (
                         <div className="podium">
                           {[data.top_performers[0], data.top_performers[1], data.top_performers[2]].map((p, idx) => {
                             const place = idx + 1;
@@ -188,77 +191,43 @@ export default function DashboardPage() {
                             );
                           })}
                         </div>
-                      ) : (
-                        /* Fewer than 3 performers — flat list only */
-                        <div className="dash-performers">
-                          {data.top_performers.map((p, i) => (
-                            <div className="dash-performer" key={p._id}>
-                              <span className="dash-performer-rank">{i + 1}</span>
-                              <div className="dash-performer-thumb">
-                                {p.image_url ? (
-                                  <img src={p.image_url} alt="" />
-                                ) : (
-                                  <span className="thumb-placeholder-sm">
-                                    {p.ad_type === "video" ? "▶" : "⬡"}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="dash-performer-info">
-                                <span className="dash-performer-name">
-                                  {(p.ad_name || "Untitled").slice(0, 40)}
-                                </span>
-                                <span className="dash-performer-meta">
-                                  {fmt(p.spend)} spend &middot;{" "}
-                                  {goal === "lead_gen"
-                                    ? `${p.leads || p.conversions || 0} lead${(p.leads || p.conversions || 0) !== 1 ? "s" : ""}`
-                                    : `${(p.ctr || 0).toFixed(2)}% CTR`}
-                                </span>
-                              </div>
-                              <span className="dash-performer-roas">
-                                {goal === "lead_gen"
-                                  ? `${fmt(p.cpa || 0)}/lead`
-                                  : goal === "traffic"
-                                  ? `${(p.ctr || 0).toFixed(2)}% CTR`
-                                  : `${p.roas.toFixed(2)}x`}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
                       )}
 
-                      {/* Full list (all performers including top 3) */}
-                      <div className="podium-divider" />
+                      {/* Full list — all performers for easy comparison */}
+                      <div className="podium-divider">
+                        <span className="podium-divider-label">All performers</span>
+                      </div>
                       <div className="dash-performers">
                         {data.top_performers.map((p, i) => (
                           <div className="dash-performer" key={p._id}>
                             <span className="dash-performer-rank">{i + 1}</span>
-                                <div className="dash-performer-thumb">
-                                  {p.image_url ? (
-                                    <img src={p.image_url} alt="" />
-                                  ) : (
-                                    <span className="thumb-placeholder-sm">
-                                      {p.ad_type === "video" ? "▶" : "⬡"}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="dash-performer-info">
-                                  <span className="dash-performer-name">
-                                    {(p.ad_name || "Untitled").slice(0, 40)}
-                                  </span>
-                                  <span className="dash-performer-meta">
-                                    {fmt(p.spend)} spend &middot;{" "}
-                                    {goal === "lead_gen"
-                                      ? `${p.leads || p.conversions || 0} lead${(p.leads || p.conversions || 0) !== 1 ? "s" : ""}`
-                                      : `${(p.ctr || 0).toFixed(2)}% CTR`}
-                                  </span>
-                                </div>
-                                <span className="dash-performer-roas">
-                                  {goal === "lead_gen"
-                                    ? `${fmt(p.cpa || 0)}/lead`
-                                    : goal === "traffic"
-                                    ? `${(p.ctr || 0).toFixed(2)}% CTR`
-                                    : `${p.roas.toFixed(2)}x`}
+                            <div className="dash-performer-thumb">
+                              {p.image_url ? (
+                                <img src={p.image_url} alt="" />
+                              ) : (
+                                <span className="thumb-placeholder-sm">
+                                  {p.ad_type === "video" ? "▶" : "⬡"}
                                 </span>
+                              )}
+                            </div>
+                            <div className="dash-performer-info">
+                              <span className="dash-performer-name">
+                                {(p.ad_name || "Untitled").slice(0, 40)}
+                              </span>
+                              <span className="dash-performer-meta">
+                                {fmt(p.spend)} spend &middot;{" "}
+                                {goal === "lead_gen"
+                                  ? `${p.leads || p.conversions || 0} lead${(p.leads || p.conversions || 0) !== 1 ? "s" : ""}`
+                                  : `${(p.ctr || 0).toFixed(2)}% CTR`}
+                              </span>
+                            </div>
+                            <span className="dash-performer-roas">
+                              {goal === "lead_gen"
+                                ? `${fmt(p.cpa || 0)}/lead`
+                                : goal === "traffic"
+                                ? `${(p.ctr || 0).toFixed(2)}% CTR`
+                                : `${p.roas.toFixed(2)}x`}
+                            </span>
                           </div>
                         ))}
                       </div>
