@@ -51,7 +51,10 @@ export default function AnalyticsPage() {
   const hasData = Object.keys(stages).length > 0;
   const goalLabel = goal === "lead_gen" ? "Lead Gen (CPA)" : goal === "traffic" ? "Traffic (CTR)" : "Purchase ROAS";
 
-  const stageEntries = Object.entries(stages);
+  const stageOrder = ["TOF", "MOF", "BOF", "unclassified"];
+  const stageEntries = Object.entries(stages).sort(
+    (a, b) => stageOrder.indexOf(a[0]) - stageOrder.indexOf(b[0])
+  );
   const currentStage = activeStage || (stageEntries.length > 0 ? stageEntries[0][0] : null);
 
   const toggle = (section: string) => {
