@@ -171,40 +171,118 @@ export default function DashboardPage() {
                     <Link href="/analytics" className="btn btn-sm btn-ghost">View all</Link>
                   </div>
                   {data.top_performers.length > 0 ? (
-                    <div className="dash-performers">
-                      {data.top_performers.map((p, i) => (
-                        <div className="dash-performer" key={p._id}>
-                          <span className="dash-performer-rank">{i + 1}</span>
-                          <div className="dash-performer-thumb">
-                            {p.image_url ? (
-                              <img src={p.image_url} alt="" />
-                            ) : (
-                              <span className="thumb-placeholder-sm">
-                                {p.ad_type === "video" ? "▶" : "⬡"}
-                              </span>
-                            )}
-                          </div>
-                          <div className="dash-performer-info">
-                            <span className="dash-performer-name">
-                              {(p.ad_name || "Untitled").slice(0, 40)}
-                            </span>
-                            <span className="dash-performer-meta">
-                              {fmt(p.spend)} spend &middot;{" "}
-                              {goal === "lead_gen"
-                                ? `${p.leads || p.conversions || 0} lead${(p.leads || p.conversions || 0) !== 1 ? "s" : ""}`
-                                : `${(p.ctr || 0).toFixed(2)}% CTR`}
-                            </span>
-                          </div>
-                          <span className="dash-performer-roas">
-                            {goal === "lead_gen"
+                    <>
+                      {/* Podium — top 3 */}
+                      {data.top_performers.length >= 3 ? (
+                        <div className="podium">
+                          {[data.top_performers[1], data.top_performers[0], data.top_performers[2]].map((p, idx) => {
+                            const place = idx === 0 ? 2 : idx === 1 ? 1 : 3;
+                            const cls = `podium-item podium-${place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"}`;
+                            const metric = goal === "lead_gen"
                               ? `${fmt(p.cpa || 0)}/lead`
                               : goal === "traffic"
                               ? `${(p.ctr || 0).toFixed(2)}% CTR`
-                              : `${p.roas.toFixed(2)}x`}
-                          </span>
+                              : `${p.roas.toFixed(2)}x`;
+                            return (
+                              <div className={cls} key={p._id}>
+                                <div className="podium-img-wrapper">
+                                  {p.image_url ? (
+                                    <img src={p.image_url} alt="" />
+                                  ) : (
+                                    <span className="podium-placeholder">
+                                      {p.ad_type === "video" ? "▶" : "⬡"}
+                                    </span>
+                                  )}
+                                  <span className="podium-rank">{place}</span>
+                                </div>
+                                <span className="podium-name">
+                                  {(p.ad_name || "Untitled").slice(0, 24)}
+                                </span>
+                                <span className="podium-metric">{metric}</span>
+                                <span className="podium-sub">{fmt(p.spend)} spend</span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
+                      ) : (
+                        /* Fewer than 3 performers — flat list only */
+                        <div className="dash-performers">
+                          {data.top_performers.map((p, i) => (
+                            <div className="dash-performer" key={p._id}>
+                              <span className="dash-performer-rank">{i + 1}</span>
+                              <div className="dash-performer-thumb">
+                                {p.image_url ? (
+                                  <img src={p.image_url} alt="" />
+                                ) : (
+                                  <span className="thumb-placeholder-sm">
+                                    {p.ad_type === "video" ? "▶" : "⬡"}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="dash-performer-info">
+                                <span className="dash-performer-name">
+                                  {(p.ad_name || "Untitled").slice(0, 40)}
+                                </span>
+                                <span className="dash-performer-meta">
+                                  {fmt(p.spend)} spend &middot;{" "}
+                                  {goal === "lead_gen"
+                                    ? `${p.leads || p.conversions || 0} lead${(p.leads || p.conversions || 0) !== 1 ? "s" : ""}`
+                                    : `${(p.ctr || 0).toFixed(2)}% CTR`}
+                                </span>
+                              </div>
+                              <span className="dash-performer-roas">
+                                {goal === "lead_gen"
+                                  ? `${fmt(p.cpa || 0)}/lead`
+                                  : goal === "traffic"
+                                  ? `${(p.ctr || 0).toFixed(2)}% CTR`
+                                  : `${p.roas.toFixed(2)}x`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Rest (#4, #5, …) as flat list */}
+                      {data.top_performers.length > 3 && (
+                        <>
+                          <div className="podium-divider" />
+                          <div className="dash-performers">
+                            {data.top_performers.slice(3).map((p, i) => (
+                              <div className="dash-performer" key={p._id}>
+                                <span className="dash-performer-rank">{i + 4}</span>
+                                <div className="dash-performer-thumb">
+                                  {p.image_url ? (
+                                    <img src={p.image_url} alt="" />
+                                  ) : (
+                                    <span className="thumb-placeholder-sm">
+                                      {p.ad_type === "video" ? "▶" : "⬡"}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="dash-performer-info">
+                                  <span className="dash-performer-name">
+                                    {(p.ad_name || "Untitled").slice(0, 40)}
+                                  </span>
+                                  <span className="dash-performer-meta">
+                                    {fmt(p.spend)} spend &middot;{" "}
+                                    {goal === "lead_gen"
+                                      ? `${p.leads || p.conversions || 0} lead${(p.leads || p.conversions || 0) !== 1 ? "s" : ""}`
+                                      : `${(p.ctr || 0).toFixed(2)}% CTR`}
+                                  </span>
+                                </div>
+                                <span className="dash-performer-roas">
+                                  {goal === "lead_gen"
+                                    ? `${fmt(p.cpa || 0)}/lead`
+                                    : goal === "traffic"
+                                    ? `${(p.ctr || 0).toFixed(2)}% CTR`
+                                    : `${p.roas.toFixed(2)}x`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <p className="cell-muted" style={{ padding: "20px 0" }}>
                       No performers with sufficient spend yet
