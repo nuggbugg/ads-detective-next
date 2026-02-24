@@ -135,6 +135,15 @@ export default function AnalyticsPage() {
                               <div className="score-bar" style={{ width: `${c.score}%` }} />
                               <span className="score-value">{c.score}</span>
                             </div>
+                            <div className="wr-item-thumb">
+                              {c.image_url ? (
+                                <img src={c.image_url} alt="" />
+                              ) : (
+                                <span className="wr-thumb-placeholder">
+                                  {c.ad_type === "video" ? "▶" : "⬡"}
+                                </span>
+                              )}
+                            </div>
                             <div className="wr-item-info">
                               <span className="wr-item-name">
                                 {(c.ad_name || "Untitled").slice(0, 40)}
@@ -197,14 +206,27 @@ export default function AnalyticsPage() {
                                 : `${c.roas.toFixed(2)}x`;
                             return (
                               <div key={c._id} className={`ks-card ks-card-${type}`}>
-                                <div className="ks-card-header">
-                                  <span className="ks-card-name">
-                                    {(c.ad_name || "Untitled").slice(0, 35)}
-                                  </span>
-                                  <span className="ks-card-roas">{metricDisplay}</span>
-                                </div>
-                                <div className="ks-card-metrics">
-                                  {fmt(c.spend)} spend | {c.ctr.toFixed(2)}% CTR
+                                <div className="ks-card-top">
+                                  <div className="ks-card-thumb">
+                                    {c.image_url ? (
+                                      <img src={c.image_url} alt="" />
+                                    ) : (
+                                      <span className="ks-thumb-placeholder">
+                                        {c.ad_type === "video" ? "▶" : "⬡"}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="ks-card-content">
+                                    <div className="ks-card-header">
+                                      <span className="ks-card-name">
+                                        {(c.ad_name || "Untitled").slice(0, 35)}
+                                      </span>
+                                      <span className="ks-card-roas">{metricDisplay}</span>
+                                    </div>
+                                    <div className="ks-card-metrics">
+                                      {fmt(c.spend)} spend | {c.ctr.toFixed(2)}% CTR
+                                    </div>
+                                  </div>
                                 </div>
                                 <p className="ks-card-rationale">{c.rationale}</p>
                               </div>
