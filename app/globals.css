@@ -2497,7 +2497,7 @@ body {
 /* The floating tooltip popup */
 .tooltip-popup {
   position: fixed;
-  z-index: 500;
+  z-index: 9999;
   max-width: 300px;
   padding: 10px 14px;
   font-family: var(--font-sans);

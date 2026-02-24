@@ -109,12 +109,15 @@ export function TooltipProvider() {
       const tip = target.dataset.tip || target.dataset.tooltip;
       if (!tip) return;
 
+      // Set content and measure off-screen first
       el.textContent = tip;
+      el.style.left = "-9999px";
+      el.style.top = "-9999px";
       el.classList.add("visible");
 
-      // Position below the target
-      const rect = target.getBoundingClientRect();
+      // Force reflow so we get accurate dimensions
       const tipRect = el.getBoundingClientRect();
+      const rect = target.getBoundingClientRect();
 
       let left = rect.left + rect.width / 2 - tipRect.width / 2;
       let top = rect.bottom + 8;
@@ -138,32 +141,46 @@ export function TooltipProvider() {
       }, 80);
     }
 
-    function onMouseEnter(e: Event) {
+    let currentTarget: HTMLElement | null = null;
+
+    function onMouseOver(e: Event) {
       const target = (e.target as HTMLElement).closest(".has-tip") as HTMLElement | null;
-      if (target) show(target);
+      if (target && target !== currentTarget) {
+        currentTarget = target;
+        show(target);
+      } else if (!target && currentTarget) {
+        currentTarget = null;
+        hide();
+      }
     }
 
-    function onMouseLeave(e: Event) {
-      const target = (e.target as HTMLElement).closest(".has-tip") as HTMLElement | null;
-      if (target) hide();
+    function onMouseOut(e: Event) {
+      const related = (e as MouseEvent).relatedTarget as HTMLElement | null;
+      const stillInTip = related?.closest(".has-tip") === currentTarget;
+      if (!stillInTip) {
+        currentTarget = null;
+        hide();
+      }
     }
 
     function onTouchStart(e: Event) {
       const target = (e.target as HTMLElement).closest(".has-tip") as HTMLElement | null;
       if (target) {
+        currentTarget = target;
         show(target);
       } else {
+        currentTarget = null;
         hide();
       }
     }
 
-    document.addEventListener("mouseenter", onMouseEnter, true);
-    document.addEventListener("mouseleave", onMouseLeave, true);
+    document.addEventListener("mouseover", onMouseOver);
+    document.addEventListener("mouseout", onMouseOut);
     document.addEventListener("touchstart", onTouchStart, { passive: true });
 
     return () => {
-      document.removeEventListener("mouseenter", onMouseEnter, true);
-      document.removeEventListener("mouseleave", onMouseLeave, true);
+      document.removeEventListener("mouseover", onMouseOver);
+      document.removeEventListener("mouseout", onMouseOut);
       document.removeEventListener("touchstart", onTouchStart);
     };
   }, []);
