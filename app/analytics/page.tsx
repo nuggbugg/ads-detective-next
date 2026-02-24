@@ -99,6 +99,9 @@ export default function AnalyticsPage() {
                       </button>
                     ))}
                   </div>
+                  <p className="wr-score-hint">
+                    Score = percentile rank (0–100). Hover a bar for details.
+                  </p>
 
                   {stageEntries.map(([stage, data]) => (
                     <div
@@ -131,7 +134,10 @@ export default function AnalyticsPage() {
                       <div className="wr-list">
                         {data.creatives.slice(0, 20).map((c) => (
                           <div className="wr-item" key={c._id}>
-                            <div className="wr-item-score">
+                            <div
+                              className="wr-item-score"
+                              title={`Percentile score: ${c.score}/100 — This creative outperforms ${c.score}% of others in this stage based on ${stage === "TOF" ? "CTR (60%) + CPM (40%)" : stage === "MOF" ? "CPC (50%) + CTR (50%)" : goal === "lead_gen" ? "CPA (60%) + CTR (40%)" : goal === "traffic" ? "CTR (60%) + CPC (40%)" : "ROAS + CPA"}`}
+                            >
                               <div className="score-bar" style={{ width: `${c.score}%` }} />
                               <span className="score-value">{c.score}</span>
                             </div>
