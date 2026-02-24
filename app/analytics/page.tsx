@@ -100,7 +100,7 @@ export default function AnalyticsPage() {
                     ))}
                   </div>
                   <p className="wr-score-hint">
-                    Score = percentile rank (0–100). Hover a bar for details.
+                    Each bar shows how a creative ranks against others in this stage — a score of 80 means it beats 80% of creatives. Hover for breakdown.
                   </p>
 
                   {stageEntries.map(([stage, data]) => (
@@ -136,7 +136,7 @@ export default function AnalyticsPage() {
                           <div className="wr-item" key={c._id}>
                             <div
                               className="wr-item-score"
-                              title={`Percentile score: ${c.score}/100 — This creative outperforms ${c.score}% of others in this stage based on ${stage === "TOF" ? "CTR (60%) + CPM (40%)" : stage === "MOF" ? "CPC (50%) + CTR (50%)" : goal === "lead_gen" ? "CPA (60%) + CTR (40%)" : goal === "traffic" ? "CTR (60%) + CPC (40%)" : "ROAS + CPA"}`}
+                              title={`Score ${c.score}/100 — Beats ${c.score}% of creatives in ${stage}.\nBased on: ${stage === "TOF" ? "CTR (60%) + low CPM (40%)" : stage === "MOF" ? "low CPC (50%) + CTR (50%)" : goal === "lead_gen" ? "low CPA (60%) + CTR (40%)" : goal === "traffic" ? "CTR (60%) + low CPC (40%)" : "ROAS (60%) + low CPA (40%)"}`}
                             >
                               <div className="score-bar" style={{ width: `${c.score}%` }} />
                               <span className="score-value">{c.score}</span>
@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
               </svg>
             </div>
             <div className={`section-content ${collapsed["priorities"] ? "collapsed" : ""}`}>
-              {prioritiesData.priorities.length > 0 ? (
+              {prioritiesData.priorities && prioritiesData.priorities.length > 0 ? (
                 <div className="priorities-list">
                   {prioritiesData.priorities.slice(0, 15).map((p: any, i: number) => (
                     <div key={i} className="priority-card">
