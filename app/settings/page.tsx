@@ -8,10 +8,13 @@ import { useToast } from "@/components/ui/Toast";
 
 export default function SettingsPage() {
   const settings = useQuery(api.settings.getAll);
+  const currencyData = useQuery(api.settings.getCurrency);
   const setMany = useMutation(api.settings.setMany);
   const testMeta = useAction(api.settings.testMetaConnection);
   const seedDefaults = useMutation(api.settings.seedDefaults);
   const toast = useToast();
+
+  const currencySymbol = currencyData?.symbol || "$";
 
   const [metaToken, setMetaToken] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
@@ -307,7 +310,7 @@ export default function SettingsPage() {
                     min="0"
                     step="1"
                   />
-                  <span className="unit">$</span>
+                  <span className="unit">{currencySymbol}</span>
                 </div>
               </div>
             )}
@@ -328,7 +331,7 @@ export default function SettingsPage() {
                   min="0"
                   step="10"
                 />
-                <span className="unit">$</span>
+                <span className="unit">{currencySymbol}</span>
               </div>
             </div>
 
