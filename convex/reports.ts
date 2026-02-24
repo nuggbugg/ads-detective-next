@@ -92,22 +92,31 @@ export const generate = mutation({
       sorted = [...qualified].sort((a, b) => b.roas - a.roas);
     }
 
-    const mapPerformer = (c: typeof creatives[0]) => ({
-      _id: c._id,
-      ad_name: c.ad_name,
-      roas: c.roas,
-      spend: c.spend,
-      ctr: c.ctr,
-      cpa: c.cpa,
-      purchases: c.purchases,
-      leads: c.leads,
-      conversions: c.conversions,
-      clicks: c.clicks,
-      funnel_stage: c.funnel_stage,
-    });
+    const mapPerformer = async (c: typeof creatives[0]) => {
+      let image_url = c.thumbnail_url || null;
+      if (c.image_storage_id) {
+        const url = await ctx.storage.getUrl(c.image_storage_id);
+        if (url) image_url = url;
+      }
+      return {
+        _id: c._id,
+        ad_name: c.ad_name,
+        ad_type: c.ad_type,
+        roas: c.roas,
+        spend: c.spend,
+        ctr: c.ctr,
+        cpa: c.cpa,
+        purchases: c.purchases,
+        leads: c.leads,
+        conversions: c.conversions,
+        clicks: c.clicks,
+        funnel_stage: c.funnel_stage,
+        image_url,
+      };
+    };
 
-    const topPerformers = sorted.slice(0, 5).map(mapPerformer);
-    const bottomPerformers = sorted.slice(-5).reverse().map(mapPerformer);
+    const topPerformers = await Promise.all(sorted.slice(0, 5).map(mapPerformer));
+    const bottomPerformers = await Promise.all(sorted.slice(-5).reverse().map(mapPerformer));
 
     // Date window
     const dates = creatives.map((c) => c.date_start).filter(Boolean).sort() as string[];

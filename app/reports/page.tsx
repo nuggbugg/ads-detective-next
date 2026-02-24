@@ -177,13 +177,25 @@ export default function ReportsPage() {
                 <div className="table-wrapper">
                   <table className="data-table">
                     <thead>
-                      <tr><th>Ad Name</th><th>Spend</th><th>ROAS</th><th>CTR</th><th>CPA</th></tr>
+                      <tr><th style={{ width: 48 }}></th><th>Ad Name</th><th>Spend</th><th>ROAS</th><th>CTR</th><th>CPA</th></tr>
                     </thead>
                     <tbody>
                       {(selectedReport.top_performers as Array<{
                         _id?: string; ad_name?: string; spend: number; roas: number; ctr: number; cpa: number;
+                        image_url?: string | null; ad_type?: string;
                       }>).map((p, i) => (
                         <tr key={p._id || i}>
+                          <td>
+                            <div className="table-thumb">
+                              {p.image_url ? (
+                                <img src={p.image_url} alt="" />
+                              ) : (
+                                <span className="table-thumb-placeholder">
+                                  {p.ad_type === "video" ? "▶" : "⬡"}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="cell-primary">{(p.ad_name || "Untitled").slice(0, 40)}</td>
                           <td>{fmt(p.spend)}</td>
                           <td>{p.roas.toFixed(2)}x</td>
@@ -201,13 +213,25 @@ export default function ReportsPage() {
                 <div className="table-wrapper">
                   <table className="data-table">
                     <thead>
-                      <tr><th>Ad Name</th><th>Spend</th><th>ROAS</th><th>CTR</th><th>CPA</th></tr>
+                      <tr><th style={{ width: 48 }}></th><th>Ad Name</th><th>Spend</th><th>ROAS</th><th>CTR</th><th>CPA</th></tr>
                     </thead>
                     <tbody>
                       {(selectedReport.bottom_performers as Array<{
                         _id?: string; ad_name?: string; spend: number; roas: number; ctr: number; cpa: number;
+                        image_url?: string | null; ad_type?: string;
                       }>).map((p, i) => (
                         <tr key={p._id || i}>
+                          <td>
+                            <div className="table-thumb">
+                              {p.image_url ? (
+                                <img src={p.image_url} alt="" />
+                              ) : (
+                                <span className="table-thumb-placeholder">
+                                  {p.ad_type === "video" ? "▶" : "⬡"}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="cell-primary">{(p.ad_name || "Untitled").slice(0, 40)}</td>
                           <td>{fmt(p.spend)}</td>
                           <td>{p.roas.toFixed(2)}x</td>
