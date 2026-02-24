@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3001",
-    "build": "npx convex deploy --cmd 'next build'",
+    "build": "next build",
     "start": "next start"
   },
   "keywords": [],
