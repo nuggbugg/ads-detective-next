@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
+import { Tip } from "@/components/ui/Tooltip";
 
 export default function CreativesPage() {
   const [filters, setFilters] = useState<{
@@ -230,15 +231,15 @@ export default function CreativesPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <SortTh col="ad_name">Ad Name</SortTh>
-                <th>Type</th>
-                <SortTh col="spend">Spend</SortTh>
-                <SortTh col={primaryMetricKey}>{goal === "lead_gen" ? "CPA" : goal === "traffic" ? "CTR" : "ROAS"}</SortTh>
-                <SortTh col="ctr">CTR</SortTh>
-                <SortTh col="impressions">Impressions</SortTh>
-                <th>Stage</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <SortTh col="ad_name"><Tip label="Ad Name" /></SortTh>
+                <th><Tip label="Type" /></th>
+                <SortTh col="spend"><Tip label="Spend" /></SortTh>
+                <SortTh col={primaryMetricKey}><Tip label={goal === "lead_gen" ? "CPA" : goal === "traffic" ? "CTR" : "ROAS"} /></SortTh>
+                <SortTh col="ctr"><Tip label="CTR" /></SortTh>
+                <SortTh col="impressions"><Tip label="Impressions" /></SortTh>
+                <th><Tip label="Stage" /></th>
+                <th><Tip label="Status" /></th>
+                <th><Tip label="Actions" /></th>
               </tr>
             </thead>
             <tbody>
@@ -414,37 +415,37 @@ export default function CreativesPage() {
                 <div className="creative-modal-metrics">
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{fmt(selectedCreative.spend)}</span>
-                    <span className="cmm-label">Spend</span>
+                    <span className="cmm-label"><Tip label="Spend" /></span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">
                       {selectedCreative.cpa > 0 ? fmt(selectedCreative.cpa) : "—"}
                     </span>
-                    <span className="cmm-label">{goal === "lead_gen" ? "Cost/Lead" : "CPA"}</span>
+                    <span className="cmm-label"><Tip label={goal === "lead_gen" ? "Cost/Lead" : "CPA"} /></span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{selectedCreative.leads || selectedCreative.conversions || 0}</span>
-                    <span className="cmm-label">Leads</span>
+                    <span className="cmm-label"><Tip label="Leads" /></span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{(selectedCreative.ctr ?? 0).toFixed(2)}%</span>
-                    <span className="cmm-label">CTR</span>
+                    <span className="cmm-label"><Tip label="CTR" /></span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{selectedCreative.impressions.toLocaleString()}</span>
-                    <span className="cmm-label">Impressions</span>
+                    <span className="cmm-label"><Tip label="Impressions" /></span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{selectedCreative.clicks.toLocaleString()}</span>
-                    <span className="cmm-label">Clicks</span>
+                    <span className="cmm-label"><Tip label="Clicks" /></span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{fmt(selectedCreative.cpc)}</span>
-                    <span className="cmm-label">CPC</span>
+                    <span className="cmm-label"><Tip label="CPC" /></span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{(selectedCreative.roas ?? 0).toFixed(2)}x</span>
-                    <span className="cmm-label">ROAS</span>
+                    <span className="cmm-label"><Tip label="ROAS" /></span>
                   </div>
                 </div>
 

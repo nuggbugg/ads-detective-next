@@ -75,6 +75,40 @@ const GLOSSARY: Record<string, string> = {
   "Lead Gen": "Optimizing for lead generation — Cost Per Lead is the primary metric.",
   "Traffic": "Optimizing for website traffic — Click-Through Rate is the primary metric.",
   "Purchase ROAS": "Optimizing for purchase revenue — Return On Ad Spend is the primary metric.",
+
+  // Table headers & additional labels
+  "Ad Name": "The name of the ad as it appears in Meta Ads Manager.",
+  "Type": "Ad format — IMAGE or VIDEO.",
+  "Stage": "Funnel stage assigned by AI analysis — TOF, MOF, or BOF.",
+  "Status": "Whether the creative has been analyzed by the AI.",
+  "Actions": "Quick actions — analyze or view details.",
+  "Ad Status": "Current delivery status in Meta — Active, Paused, etc.",
+
+  // Dashboard metric labels
+  "TOTAL SPEND": "Total amount spent across all synced creatives in the configured date range.",
+  "AVG COST/LEAD": "Average cost to acquire one lead across all creatives.",
+  "AVG CTR": "Average Click-Through Rate across all creatives — higher means better engagement.",
+  "AVG CPC": "Average Cost Per Click across all creatives.",
+  "AVG ROAS": "Average Return On Ad Spend — revenue generated per unit spent.",
+  "CREATIVES": "Total number of ad creatives synced from your Meta ad accounts.",
+  "Active Ads": "Ads currently running and spending budget in Meta.",
+
+  // Dashboard sections
+  "Analysis Status": "Overview of how many creatives have been analyzed by the AI.",
+  "Accounts": "Connected Meta ad accounts and their sync status.",
+  "Quick Actions": "Shortcuts to common tasks.",
+  "Overview": "High-level summary of your ad performance.",
+
+  // Creatives page
+  "Pending": "This creative hasn't been analyzed yet. Click 'Analyze' to run AI analysis.",
+  "Had delivery": "Only show creatives that have at least some spend (delivered impressions).",
+  "Active only": "Only show ads with ACTIVE delivery status in Meta.",
+  "No grouping": "Show all creatives in a flat list without grouping.",
+
+  // Additional analytics
+  "Win Rate Analysis": "How your creatives perform relative to each other within each funnel stage.",
+  "Kill / Scale Recommendations": "AI-powered suggestions for which ads to scale up, watch, or pause.",
+  "Iteration Priorities": "Ranked list of creative testing ideas based on performance patterns.",
 };
 
 export function getTooltip(label: string): string | null {

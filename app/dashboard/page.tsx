@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { PageLoader } from "@/components/ui/Loader";
 import Link from "next/link";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
+import { Tip } from "@/components/ui/Tooltip";
 
 function formatTimeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -58,22 +59,22 @@ export default function DashboardPage() {
           <div className="dash-summary-item">
             <span className="dash-summary-dot dot-teal" />
             <span className="dash-summary-count">{m.active_ads || 0}</span>
-            <span>Active</span>
+            <Tip label="Active" />
           </div>
           <div className="dash-summary-item">
             <span className="dash-summary-dot dot-purple" />
             <span className="dash-summary-count">{m.pending_count || 0}</span>
-            <span>Pending analysis</span>
+            <Tip label="Pending analysis" />
           </div>
           <div className="dash-summary-item">
             <span className="dash-summary-dot dot-sky" />
             <span className="dash-summary-count">{m.analyzed_count || 0}</span>
-            <span>Analyzed</span>
+            <Tip label="Analyzed" />
           </div>
           <div className="dash-summary-item">
             <span className="dash-summary-dot dot-accent" />
             <span className="dash-summary-count">{m.total_creatives || 0}</span>
-            <span>Total creatives</span>
+            <Tip label="Total creatives" />
           </div>
           <div className="dash-summary-item">
             <span className="dash-summary-dot dot-cyan" />
@@ -113,17 +114,17 @@ export default function DashboardPage() {
               <div className="dash-metrics">
                 <div className="dash-metric-card dash-metric-accent">
                   <div className="dash-metric-top">
-                    <span className="dash-metric-label">Total Spend</span>
+                    <span className="dash-metric-label"><Tip label="Total Spend" /></span>
                     <svg className="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                       <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
                   </div>
                   <div className="dash-metric-value">{fmt(m.total_spend)}</div>
-                  <div className="dash-metric-sub">{m.total_impressions.toLocaleString()} impressions</div>
+                  <div className="dash-metric-sub"><Tip label="Impressions">{m.total_impressions.toLocaleString()} impressions</Tip></div>
                 </div>
                 <div className="dash-metric-card">
                   <div className="dash-metric-top">
-                    <span className="dash-metric-label">{goalMetric.label}</span>
+                    <span className="dash-metric-label"><Tip label={goalMetric.label} /></span>
                   </div>
                   <div className="dash-metric-value">{goalMetric.value}</div>
                   <div className="dash-metric-sub">{goalMetric.sub}</div>
@@ -131,7 +132,7 @@ export default function DashboardPage() {
                 <div className="dash-metric-card">
                   <div className="dash-metric-top">
                     <span className="dash-metric-label">
-                      {goal === "traffic" ? "Avg CPC" : "Avg CTR"}
+                      <Tip label={goal === "traffic" ? "Avg CPC" : "Avg CTR"} />
                     </span>
                   </div>
                   <div className="dash-metric-value">
@@ -139,14 +140,14 @@ export default function DashboardPage() {
                       ? fmt(m.total_clicks > 0 ? m.total_spend / m.total_clicks : 0)
                       : m.avg_ctr.toFixed(2) + "%"}
                   </div>
-                  <div className="dash-metric-sub">{m.total_clicks.toLocaleString()} clicks</div>
+                  <div className="dash-metric-sub"><Tip label="Clicks">{m.total_clicks.toLocaleString()} clicks</Tip></div>
                 </div>
                 <div className="dash-metric-card">
                   <div className="dash-metric-top">
-                    <span className="dash-metric-label">Creatives</span>
+                    <span className="dash-metric-label"><Tip label="Creatives" /></span>
                   </div>
                   <div className="dash-metric-value">{m.total_creatives}</div>
-                  <div className="dash-metric-sub">{m.active_ads} active ads</div>
+                  <div className="dash-metric-sub"><Tip label="Active Ads">{m.active_ads} active ads</Tip></div>
                 </div>
               </div>
 
@@ -154,7 +155,7 @@ export default function DashboardPage() {
                 {/* Top Performers */}
                 <div className="dash-card dash-card-wide">
                   <div className="dash-card-header">
-                    <h3>Top Performers</h3>
+                    <h3><Tip label="Top Performers" /></h3>
                     <Link href="/analytics" className="btn btn-sm btn-ghost">View all</Link>
                   </div>
                   {data.top_performers.length > 0 ? (
@@ -242,7 +243,7 @@ export default function DashboardPage() {
                 {/* Analysis Status */}
                 <div className="dash-card">
                   <div className="dash-card-header">
-                    <h3>Analysis Status</h3>
+                    <h3><Tip label="Analysis Status" /></h3>
                   </div>
                   <div className="dash-analysis-stats">
                     <div className="dash-analysis-row">
