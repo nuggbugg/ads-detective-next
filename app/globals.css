@@ -959,6 +959,35 @@ body {
 .data-table tbody tr:last-child td { border-bottom: none; }
 .data-table tbody tr:hover { background: rgba(0,0,0,0.015); }
 
+/* Table group rows */
+.table-group-row td {
+  background: var(--bg-card-hover);
+  padding: 8px 12px !important;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.table-group-count {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  background: var(--bg-page);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-weight: 400;
+}
+
+/* Video preview in modal */
+.creative-modal-video {
+  width: 100%;
+  min-height: 300px;
+  border: none;
+  border-radius: 12px;
+  background: var(--bg-card-hover);
+}
+
 /* Sortable table headers */
 .sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
 .sortable-th:hover { color: var(--text-primary); }

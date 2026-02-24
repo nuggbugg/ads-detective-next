@@ -39,9 +39,10 @@ export const _syncAccountImpl = internalAction({
     const token = await ctx.runQuery(internal.settings.get, { key: "meta_access_token" });
     if (!token) throw new Error("Meta access token not configured");
 
-    // Get date range
+    // Get date range — use 90-day baseline for first sync, configured window otherwise
+    const isFirstSync = !account.last_synced_at;
     const dateRangeDays = await ctx.runQuery(internal.settings.get, { key: "date_range_days" });
-    const days = parseInt(dateRangeDays || "30");
+    const days = isFirstSync ? 90 : parseInt(dateRangeDays || "30");
 
     const until = new Date().toISOString().split("T")[0];
     const sinceDate = new Date();

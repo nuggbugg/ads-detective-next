@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [roasThreshold, setRoasThreshold] = useState("2.0");
   const [cpaThreshold, setCpaThreshold] = useState("30");
   const [spendThreshold, setSpendThreshold] = useState("50");
+  const [syncFrequency, setSyncFrequency] = useState("every_6h");
 
   const [metaTesting, setMetaTesting] = useState(false);
   const [metaTestResult, setMetaTestResult] = useState<{
@@ -59,6 +60,7 @@ export default function SettingsPage() {
       if (typeof settings.winner_roas_threshold === "string") setRoasThreshold(settings.winner_roas_threshold);
       if (typeof settings.winner_cpa_threshold === "string") setCpaThreshold(settings.winner_cpa_threshold);
       if (typeof settings.iteration_spend_threshold === "string") setSpendThreshold(settings.iteration_spend_threshold);
+      if (typeof settings.sync_frequency === "string") setSyncFrequency(settings.sync_frequency);
     }
   }, [settings]);
 
@@ -120,6 +122,7 @@ export default function SettingsPage() {
         settings: {
           campaign_goal: campaignGoal,
           date_range_days: dateRange,
+          sync_frequency: syncFrequency,
           winner_roas_threshold: roasThreshold,
           winner_cpa_threshold: cpaThreshold,
           iteration_spend_threshold: spendThreshold,
@@ -268,6 +271,25 @@ export default function SettingsPage() {
                 />
                 <span className="unit">days</span>
               </div>
+            </div>
+
+            <div className="form-row">
+              <label className="form-label">
+                Sync Frequency
+                <span className="label-hint">
+                  How often to automatically sync ad data from Meta
+                </span>
+              </label>
+              <select
+                className="input input-sm"
+                value={syncFrequency}
+                onChange={(e) => setSyncFrequency(e.target.value)}
+              >
+                <option value="manual">Manual only</option>
+                <option value="every_6h">Every 6 hours</option>
+                <option value="every_12h">Every 12 hours</option>
+                <option value="daily">Once daily</option>
+              </select>
             </div>
 
             {(campaignGoal === "roas" || !campaignGoal) && (

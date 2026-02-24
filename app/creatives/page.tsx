@@ -2,7 +2,7 @@
 
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import React, { useState } from "react";
 import { PageLoader, EmptyState } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -34,6 +34,7 @@ export default function CreativesPage() {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [sortBy, setSortBy] = useState<string>("spend");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [groupBy, setGroupBy] = useState<string>("");
 
   const selectedCreative = creatives?.find((c) => c._id === selectedId);
   const goal = typeof settings?.campaign_goal === "string" ? settings.campaign_goal : "roas";
@@ -118,6 +119,21 @@ export default function CreativesPage() {
               {analyzingAll ? "Analyzing..." : `Analyze All (${pendingCount})`}
             </button>
           )}
+          {viewMode === "table" && (
+            <select
+              className="input input-sm"
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value)}
+              title="Group by"
+            >
+              <option value="">No grouping</option>
+              <option value="funnel_stage">Funnel Stage</option>
+              <option value="messaging_angle">Messaging Angle</option>
+              <option value="asset_type">Asset Type</option>
+              <option value="ad_type">Ad Type</option>
+              <option value="ad_status">Ad Status</option>
+            </select>
+          )}
           <div className="view-toggle">
             <button
               className={`view-toggle-btn ${viewMode === "table" ? "active" : ""}`}
@@ -195,7 +211,21 @@ export default function CreativesPage() {
           title="No creatives yet"
           description="Sync an ad account to see creatives here."
         />
-      ) : viewMode === "table" ? (
+      ) : viewMode === "table" ? (() => {
+        // Group logic
+        const groups: Array<{ label: string; items: typeof sortedCreatives }> = [];
+        if (groupBy && viewMode === "table") {
+          const map = new Map<string, typeof sortedCreatives>();
+          for (const c of sortedCreatives) {
+            const key = (c as Record<string, unknown>)[groupBy] as string || "Uncategorized";
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(c);
+          }
+          for (const [label, items] of map) groups.push({ label, items });
+        } else {
+          groups.push({ label: "", items: sortedCreatives });
+        }
+        return (
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
@@ -212,7 +242,16 @@ export default function CreativesPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedCreatives.map((c) => (
+              {groups.map((group, gi) => (<React.Fragment key={`g-${gi}`}>
+              {group.label && (
+                <tr className="table-group-row">
+                  <td colSpan={9}>
+                    <strong>{group.label}</strong>
+                    <span className="table-group-count">{group.items.length}</span>
+                  </td>
+                </tr>
+              )}
+              {group.items.map((c) => (
                 <tr key={c._id} onClick={() => setSelectedId(c._id)} style={{ cursor: "pointer" }}>
                   <td>
                     <div className="table-name-cell">
@@ -260,10 +299,12 @@ export default function CreativesPage() {
                   </td>
                 </tr>
               ))}
+              </React.Fragment>))}
             </tbody>
           </table>
         </div>
-      ) : (
+        );
+      })() : (
         <div className="cards-grid">
           {creatives.map((c) => {
             let perfClass = "";
@@ -332,9 +373,16 @@ export default function CreativesPage() {
               &times;
             </button>
             <div className="creative-modal-layout">
-              {/* Left: Image */}
+              {/* Left: Media */}
               <div className="creative-modal-media">
-                {selectedCreative.resolved_image_url ? (
+                {selectedCreative.ad_type === "video" && selectedCreative.preview_url ? (
+                  <iframe
+                    src={selectedCreative.preview_url}
+                    className="creative-modal-video"
+                    allowFullScreen
+                    title="Ad preview"
+                  />
+                ) : selectedCreative.resolved_image_url ? (
                   <img src={selectedCreative.resolved_image_url} alt="" />
                 ) : (
                   <div className="creative-modal-placeholder">
@@ -425,15 +473,17 @@ export default function CreativesPage() {
                 )}
 
                 <div className="creative-modal-actions">
-                  {selectedCreative.analysis_status !== "completed" && (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleAnalyze(selectedCreative._id)}
-                      disabled={analyzing === selectedCreative._id}
-                    >
-                      {analyzing === selectedCreative._id ? "Analyzing..." : "Analyze with AI"}
-                    </button>
-                  )}
+                  <button
+                    className={`btn ${selectedCreative.analysis_status === "completed" ? "btn-secondary" : "btn-primary"}`}
+                    onClick={() => handleAnalyze(selectedCreative._id)}
+                    disabled={analyzing === selectedCreative._id}
+                  >
+                    {analyzing === selectedCreative._id
+                      ? "Analyzing..."
+                      : selectedCreative.analysis_status === "completed"
+                      ? "Re-analyze"
+                      : "Analyze with AI"}
+                  </button>
                   <button className="btn btn-secondary" onClick={() => setSelectedId(null)}>
                     Close
                   </button>
