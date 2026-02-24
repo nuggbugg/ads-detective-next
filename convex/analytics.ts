@@ -430,9 +430,18 @@ export const iterationPriorities = query({
       return Math.round(metricAvg * totalSpend / 100);
     }
 
+    // Resolve image URLs for creatives (for thumbnails)
+    async function resolveImageUrl(c: typeof creatives[0]): Promise<string | null> {
+      if (c.image_storage_id) {
+        const url = await ctx.storage.getUrl(c.image_storage_id);
+        if (url) return url;
+      }
+      return c.thumbnail_url || null;
+    }
+
     const priorities: Array<{
       type: string; title: string; description: string; score: number;
-      based_on: Array<{ _id: string; ad_name?: string; roas: number; cpa: number; ctr: number }>;
+      based_on: Array<{ _id: string; ad_name?: string; roas: number; cpa: number; ctr: number; image_url?: string | null; ad_type?: string }>;
       suggestion: string;
     }> = [];
 
@@ -445,12 +454,16 @@ export const iterationPriorities = query({
       const untestedFormats = allFormats.filter((f) => !formats.includes(f));
 
       if (isGood(avg) && untestedFormats.length > 0) {
+        const basedOn = await Promise.all(items.map(async (c) => ({
+          _id: c._id as string, ad_name: c.ad_name, roas: c.roas, cpa: c.cpa, ctr: c.ctr,
+          ad_type: c.ad_type, image_url: await resolveImageUrl(c),
+        })));
         priorities.push({
           type: "angle_expansion",
           title: `Test "${angle}" in new formats`,
           description: `"${angle}" messaging averages ${formatMetric(avg)} across ${formats.join(", ")}. Try it in: ${untestedFormats.slice(0, 3).join(", ")}.`,
           score: impactScore(avg, totalSpend),
-          based_on: items.map((c) => ({ _id: c._id as string, ad_name: c.ad_name, roas: c.roas, cpa: c.cpa, ctr: c.ctr })),
+          based_on: basedOn,
           suggestion: `Create a ${untestedFormats[0]} ad using "${angle}" messaging`,
         });
       }
@@ -465,12 +478,16 @@ export const iterationPriorities = query({
       const untestedHooks = allHooks.filter((h) => !hooks.includes(h));
 
       if (isGood(avg) && untestedHooks.length > 0) {
+        const basedOn = await Promise.all(items.map(async (c) => ({
+          _id: c._id as string, ad_name: c.ad_name, roas: c.roas, cpa: c.cpa, ctr: c.ctr,
+          ad_type: c.ad_type, image_url: await resolveImageUrl(c),
+        })));
         priorities.push({
           type: "hook_variation",
           title: `New hooks for "${format}" format`,
           description: `"${format}" averages ${formatMetric(avg)}. Tested hooks: ${hooks.join(", ")}. Try: ${untestedHooks.slice(0, 3).join(", ")}.`,
           score: impactScore(avg, totalSpend),
-          based_on: items.map((c) => ({ _id: c._id as string, ad_name: c.ad_name, roas: c.roas, cpa: c.cpa, ctr: c.ctr })),
+          based_on: basedOn,
           suggestion: `Create a ${format} ad with a "${untestedHooks[0]}" hook`,
         });
       }
@@ -491,6 +508,7 @@ export const iterationPriorities = query({
           ? `${c.ctr.toFixed(2)}% CTR`
           : `${c.roas.toFixed(2)}x ROAS`;
 
+        const imgUrl = await resolveImageUrl(c);
         priorities.push({
           type: "optimization",
           title: `Optimize "${c.ad_name}"`,
@@ -498,7 +516,7 @@ export const iterationPriorities = query({
           score: config.goal === "lead_gen"
             ? Math.round(c.spend / Math.max(c.cpa, 1))
             : Math.round(c.spend * (1.5 - c.roas)),
-          based_on: [{ _id: c._id as string, ad_name: c.ad_name, roas: c.roas, cpa: c.cpa, ctr: c.ctr }],
+          based_on: [{ _id: c._id as string, ad_name: c.ad_name, roas: c.roas, cpa: c.cpa, ctr: c.ctr, ad_type: c.ad_type, image_url: imgUrl }],
           suggestion: c.hook_tactic
             ? `Try a different hook (currently "${c.hook_tactic}") or adjust the offer`
             : "Test a stronger hook or clearer offer",

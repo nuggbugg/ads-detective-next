@@ -12,6 +12,7 @@ import type * as accounts from "../accounts.js";
 import type * as analysis from "../analysis.js";
 import type * as analytics from "../analytics.js";
 import type * as creatives from "../creatives.js";
+import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as gemini from "../gemini.js";
 import type * as meta from "../meta.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   analysis: typeof analysis;
   analytics: typeof analytics;
   creatives: typeof creatives;
+  crons: typeof crons;
   dashboard: typeof dashboard;
   gemini: typeof gemini;
   meta: typeof meta;

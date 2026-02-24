@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ConvexClientProvider from "./ConvexClientProvider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { TooltipProvider } from "@/components/ui/Tooltip";
 import TopBar from "@/components/layout/TopBar";
 import "./globals.css";
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </div>
               </main>
             </div>
+            <TooltipProvider />
           </ToastProvider>
         </ConvexClientProvider>
       </body>

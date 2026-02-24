@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { PageLoader, EmptyState } from "@/components/ui/Loader";
+import { Tip } from "@/components/ui/Tooltip";
 
 function useCurrencyFormatter() {
   const currencyData = useQuery(api.settings.getCurrency);
@@ -111,23 +112,23 @@ export default function AnalyticsPage() {
                       <div className="wr-summary">
                         <div className="summary-stat">
                           <div className="stat-value">{data.total}</div>
-                          <div className="stat-label">Total</div>
+                          <div className="stat-label"><Tip label="Total" /></div>
                         </div>
                         <div className="summary-stat">
                           <div className="stat-value">{data.winners}</div>
-                          <div className="stat-label">Winners</div>
+                          <div className="stat-label"><Tip label="Winners" /></div>
                         </div>
                         <div className="summary-stat">
                           <div className="stat-value stat-highlight">{data.win_rate}%</div>
-                          <div className="stat-label">Win Rate</div>
+                          <div className="stat-label"><Tip label="Win Rate" /></div>
                         </div>
                         <div className="summary-stat">
                           <div className="stat-value">{data.headline_metric.formatted}</div>
-                          <div className="stat-label">{data.headline_metric.label}</div>
+                          <div className="stat-label"><Tip label={data.headline_metric.label} /></div>
                         </div>
                         <div className="summary-stat">
                           <div className="stat-value">{fmt(data.total_spend)}</div>
-                          <div className="stat-label">Total Spend</div>
+                          <div className="stat-label"><Tip label="Total Spend" /></div>
                         </div>
                       </div>
 
@@ -135,8 +136,8 @@ export default function AnalyticsPage() {
                         {data.creatives.slice(0, 20).map((c) => (
                           <div className="wr-item" key={c._id}>
                             <div
-                              className="wr-item-score"
-                              title={`Score ${c.score}/100 — Beats ${c.score}% of creatives in ${stage}.\nBased on: ${stage === "TOF" ? "CTR (60%) + low CPM (40%)" : stage === "MOF" ? "low CPC (50%) + CTR (50%)" : goal === "lead_gen" ? "low CPA (60%) + CTR (40%)" : goal === "traffic" ? "CTR (60%) + low CPC (40%)" : "ROAS (60%) + low CPA (40%)"}`}
+                              className="wr-item-score has-tip"
+                              data-tip={`Score ${c.score}/100 — Beats ${c.score}% of creatives in ${stage}. Based on: ${stage === "TOF" ? "CTR (60%) + low CPM (40%)" : stage === "MOF" ? "low CPC (50%) + CTR (50%)" : goal === "lead_gen" ? "low CPA (60%) + CTR (40%)" : goal === "traffic" ? "CTR (60%) + low CPC (40%)" : "ROAS (60%) + low CPA (40%)"}`}
                             >
                               <div className="score-bar" style={{ width: `${c.score}%` }} />
                               <span className="score-value">{c.score}</span>
@@ -183,13 +184,13 @@ export default function AnalyticsPage() {
               {killScaleData.summary && killScaleData.summary.total > 0 ? (
                 <>
                   <div className="ks-summary">
-                    <span className="ks-stat ks-scale">
+                    <span className="ks-stat ks-scale has-tip" data-tip="High-performing creatives worth increasing budget on.">
                       {killScaleData.summary.scale_count} Scale ({formatCompact(killScaleData.summary.scale_spend, fmt)})
                     </span>
-                    <span className="ks-stat ks-watch">
+                    <span className="ks-stat ks-watch has-tip" data-tip="Creatives with mixed signals or insufficient data — keep monitoring.">
                       {killScaleData.summary.watch_count} Watch
                     </span>
-                    <span className="ks-stat ks-kill">
+                    <span className="ks-stat ks-kill has-tip" data-tip="Underperforming creatives that should be paused to stop wasting budget.">
                       {killScaleData.summary.kill_count} Kill ({formatCompact(killScaleData.summary.kill_spend, fmt)})
                     </span>
                   </div>
@@ -271,13 +272,31 @@ export default function AnalyticsPage() {
                       <div className="priority-info">
                         <h4 className="priority-title">{p.title}</h4>
                         <p className="priority-desc">{p.description}</p>
+                        {p.based_on && p.based_on.length > 0 && (
+                          <div className="priority-thumbs">
+                            {p.based_on.slice(0, 5).map((b: any) => (
+                              <div key={b._id} className="priority-thumb" title={b.ad_name || "Untitled"}>
+                                {b.image_url ? (
+                                  <img src={b.image_url} alt="" />
+                                ) : (
+                                  <span className="priority-thumb-placeholder">
+                                    {b.ad_type === "video" ? "▶" : "⬡"}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                            {p.based_on.length > 5 && (
+                              <span className="priority-thumb-more">+{p.based_on.length - 5}</span>
+                            )}
+                          </div>
+                        )}
                         <div className="priority-suggestion">
                           <strong>Next test:</strong> {p.suggestion}
                         </div>
                       </div>
                       <div className="priority-score">
                         <div className="score-circle">{p.score}</div>
-                        <span>Impact</span>
+                        <span><Tip label="Impact" /></span>
                       </div>
                     </div>
                   ))}
