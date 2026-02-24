@@ -242,14 +242,12 @@ export default function DashboardPage() {
                         </div>
                       )}
 
-                      {/* Rest (#4, #5, …) as flat list */}
-                      {data.top_performers.length > 3 && (
-                        <>
-                          <div className="podium-divider" />
-                          <div className="dash-performers">
-                            {data.top_performers.slice(3).map((p, i) => (
-                              <div className="dash-performer" key={p._id}>
-                                <span className="dash-performer-rank">{i + 4}</span>
+                      {/* Full list (all performers including top 3) */}
+                      <div className="podium-divider" />
+                      <div className="dash-performers">
+                        {data.top_performers.map((p, i) => (
+                          <div className="dash-performer" key={p._id}>
+                            <span className="dash-performer-rank">{i + 1}</span>
                                 <div className="dash-performer-thumb">
                                   {p.image_url ? (
                                     <img src={p.image_url} alt="" />
@@ -277,11 +275,9 @@ export default function DashboardPage() {
                                     ? `${(p.ctr || 0).toFixed(2)}% CTR`
                                     : `${p.roas.toFixed(2)}x`}
                                 </span>
-                              </div>
-                            ))}
                           </div>
-                        </>
-                      )}
+                        ))}
+                      </div>
                     </>
                   ) : (
                     <p className="cell-muted" style={{ padding: "20px 0" }}>
