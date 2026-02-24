@@ -5,17 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { PageLoader, EmptyState } from "@/components/ui/Loader";
 import { Tip } from "@/components/ui/Tooltip";
-
-function useCurrencyFormatter() {
-  const currencyData = useQuery(api.settings.getCurrency);
-  return (amount: number, decimals = 2) => {
-    if (!currencyData) return `$${(amount || 0).toFixed(decimals)}`;
-    const num = (amount || 0).toFixed(decimals);
-    return currencyData.position === "after"
-      ? `${num} ${currencyData.symbol}`
-      : `${currencyData.symbol}${num}`;
-  };
-}
+import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 
 function formatCompact(amount: number, fmt: (n: number, d?: number) => string) {
   if (amount >= 1000000) return fmt(amount / 1000000, 1).replace(/\.0$/, "") + "M";
@@ -72,7 +62,7 @@ export default function AnalyticsPage() {
 
       {!hasData ? (
         <EmptyState
-          icon='<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>'
+          icon={<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>}
           title="No analytics data yet"
           description="Sync ad accounts and analyze creatives to see insights here."
         />
@@ -212,8 +202,8 @@ export default function AnalyticsPage() {
                               goal === "lead_gen"
                                 ? c.cpa > 0 ? `${fmt(c.cpa)} CPA` : "No conversions"
                                 : goal === "traffic"
-                                ? `${c.ctr.toFixed(2)}% CTR`
-                                : `${c.roas.toFixed(2)}x`;
+                                ? `${(c.ctr ?? 0).toFixed(2)}% CTR`
+                                : `${(c.roas ?? 0).toFixed(2)}x`;
                             return (
                               <div key={c._id} className={`ks-card ks-card-${type}`}>
                                 <div className="ks-card-top">
@@ -234,7 +224,7 @@ export default function AnalyticsPage() {
                                       <span className="ks-card-roas">{metricDisplay}</span>
                                     </div>
                                     <div className="ks-card-metrics">
-                                      {fmt(c.spend)} spend | {c.ctr.toFixed(2)}% CTR
+                                      {fmt(c.spend)} spend | {(c.ctr ?? 0).toFixed(2)}% CTR
                                     </div>
                                   </div>
                                 </div>

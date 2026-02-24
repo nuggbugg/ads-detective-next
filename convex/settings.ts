@@ -1,6 +1,5 @@
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation, action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
 
 // Currency symbol map
 const CURRENCY_MAP: Record<string, { symbol: string; position: "before" | "after" }> = {
@@ -93,7 +92,7 @@ export const getAll = query({
   },
 });
 
-export const get = query({
+export const get = internalQuery({
   args: { key: v.string() },
   handler: async (ctx, { key }) => {
     const setting = await ctx.db

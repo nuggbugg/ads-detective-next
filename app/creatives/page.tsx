@@ -7,17 +7,7 @@ import { PageLoader, EmptyState } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import type { Id } from "@/convex/_generated/dataModel";
-
-function useCurrencyFormatter() {
-  const currencyData = useQuery(api.settings.getCurrency);
-  return (amount: number, decimals = 2) => {
-    if (!currencyData) return `$${(amount || 0).toFixed(decimals)}`;
-    const num = (amount || 0).toFixed(decimals);
-    return currencyData.position === "after"
-      ? `${num} ${currencyData.symbol}`
-      : `${currencyData.symbol}${num}`;
-  };
-}
+import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 
 export default function CreativesPage() {
   const [filters, setFilters] = useState<{
@@ -177,7 +167,7 @@ export default function CreativesPage() {
 
       {creatives.length === 0 ? (
         <EmptyState
-          icon='<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>'
+          icon={<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>}
           title="No creatives yet"
           description="Sync an ad account to see creatives here."
         />
@@ -222,10 +212,10 @@ export default function CreativesPage() {
                     {goal === "lead_gen"
                       ? (c.cpa > 0 ? fmt(c.cpa) : "—")
                       : goal === "traffic"
-                      ? c.ctr.toFixed(2) + "%"
-                      : c.roas.toFixed(2) + "x"}
+                      ? (c.ctr ?? 0).toFixed(2) + "%"
+                      : (c.roas ?? 0).toFixed(2) + "x"}
                   </td>
-                  <td>{c.ctr.toFixed(2)}%</td>
+                  <td>{(c.ctr ?? 0).toFixed(2)}%</td>
                   <td>{c.impressions.toLocaleString()}</td>
                   <td>{c.funnel_stage || "—"}</td>
                   <td>
@@ -276,8 +266,8 @@ export default function CreativesPage() {
                     {goal === "lead_gen"
                       ? (c.cpa > 0 ? fmt(c.cpa) + "/lead" : "—")
                       : goal === "traffic"
-                      ? c.ctr.toFixed(2) + "% CTR"
-                      : c.roas.toFixed(2) + "x ROAS"}
+                      ? (c.ctr ?? 0).toFixed(2) + "% CTR"
+                      : (c.roas ?? 0).toFixed(2) + "x ROAS"}
                   </span>
                 </div>
                 <div className="creative-card-tags">
@@ -349,7 +339,7 @@ export default function CreativesPage() {
                     <span className="cmm-label">Leads</span>
                   </div>
                   <div className="creative-modal-metric">
-                    <span className="cmm-value">{selectedCreative.ctr.toFixed(2)}%</span>
+                    <span className="cmm-value">{(selectedCreative.ctr ?? 0).toFixed(2)}%</span>
                     <span className="cmm-label">CTR</span>
                   </div>
                   <div className="creative-modal-metric">
@@ -365,7 +355,7 @@ export default function CreativesPage() {
                     <span className="cmm-label">CPC</span>
                   </div>
                   <div className="creative-modal-metric">
-                    <span className="cmm-value">{selectedCreative.roas.toFixed(2)}x</span>
+                    <span className="cmm-value">{(selectedCreative.roas ?? 0).toFixed(2)}x</span>
                     <span className="cmm-label">ROAS</span>
                   </div>
                 </div>

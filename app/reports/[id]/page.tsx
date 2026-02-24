@@ -5,19 +5,9 @@ import { api } from "@/convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
 import { PageLoader } from "@/components/ui/Loader";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-function useCurrencyFormatter() {
-  const currencyData = useQuery(api.settings.getCurrency);
-  return (amount: number, decimals = 2) => {
-    if (!currencyData) return `$${(amount || 0).toFixed(decimals)}`;
-    const num = (amount || 0).toFixed(decimals);
-    return currencyData.position === "after"
-      ? `${num} ${currencyData.symbol}`
-      : `${currencyData.symbol}${num}`;
-  };
-}
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", {

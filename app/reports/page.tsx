@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageLoader, EmptyState } from "@/components/ui/Loader";
 import { useToast } from "@/components/ui/Toast";
+import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", {
@@ -15,17 +16,6 @@ function formatDate(ts: number) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function useCurrencyFormatter() {
-  const currencyData = useQuery(api.settings.getCurrency);
-  return (amount: number, decimals = 2) => {
-    if (!currencyData) return `$${(amount || 0).toFixed(decimals)}`;
-    const num = (amount || 0).toFixed(decimals);
-    return currencyData.position === "after"
-      ? `${num} ${currencyData.symbol}`
-      : `${currencyData.symbol}${num}`;
-  };
 }
 
 export default function ReportsPage() {
@@ -71,7 +61,7 @@ export default function ReportsPage() {
 
       {reports.length === 0 ? (
         <EmptyState
-          icon='<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'
+          icon={<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>}
           title="No reports yet"
           description="Generate your first report after syncing ad data."
         />
@@ -104,8 +94,8 @@ export default function ReportsPage() {
                   </td>
                   <td>{r.creative_count}</td>
                   <td>{fmt(r.total_spend)}</td>
-                  <td>{r.avg_roas.toFixed(2)}x</td>
-                  <td>{r.avg_ctr.toFixed(2)}%</td>
+                  <td>{(r.avg_roas ?? 0).toFixed(2)}x</td>
+                  <td>{(r.avg_ctr ?? 0).toFixed(2)}%</td>
                   <td className="cell-muted">
                     {r.window_start && r.window_end
                       ? `${r.window_start} — ${r.window_end}`

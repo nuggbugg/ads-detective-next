@@ -13,7 +13,7 @@ export const _analyzeOneImpl = internalAction({
   },
   handler: async (ctx, { id }): Promise<AnalysisResult> => {
     // Get Gemini key
-    const apiKey = await ctx.runQuery(api.settings.get, { key: "gemini_api_key" });
+    const apiKey = await ctx.runQuery(internal.settings.get, { key: "gemini_api_key" });
     if (!apiKey) throw new Error("Gemini API key not configured");
 
     // Get creative (includes resolved_image_url from storage)
@@ -75,7 +75,7 @@ export const _analyzeUnanalyzedImpl = internalAction({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit }): Promise<{ analyzed: number; errors: number; total: number }> => {
-    const apiKey = await ctx.runQuery(api.settings.get, { key: "gemini_api_key" });
+    const apiKey = await ctx.runQuery(internal.settings.get, { key: "gemini_api_key" });
     if (!apiKey) return { analyzed: 0, errors: 0, total: 0 };
 
     // Get pending creatives

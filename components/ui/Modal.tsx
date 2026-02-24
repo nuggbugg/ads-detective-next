@@ -43,7 +43,7 @@ interface ConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  message: string;
+  message: ReactNode;
   confirmLabel?: string;
   confirmClass?: string;
 }
@@ -66,7 +66,7 @@ export function ConfirmModal({
         </button>
       </div>
       <div className="modal-body">
-        <p dangerouslySetInnerHTML={{ __html: message }} />
+        <p>{message}</p>
       </div>
       <div className="modal-footer">
         <button className="btn btn-secondary" onClick={onClose}>

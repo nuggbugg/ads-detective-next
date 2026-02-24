@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PageLoader } from "@/components/ui/Loader";
 import Link from "next/link";
+import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 
 function formatTimeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -13,17 +14,6 @@ function formatTimeAgo(iso: string) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
-}
-
-function useCurrencyFormatter() {
-  const currencyData = useQuery(api.settings.getCurrency);
-  return (amount: number, decimals = 2) => {
-    if (!currencyData) return `$${(amount || 0).toFixed(decimals)}`;
-    const num = (amount || 0).toFixed(decimals);
-    return currencyData.position === "after"
-      ? `${num} ${currencyData.symbol}`
-      : `${currencyData.symbol}${num}`;
-  };
 }
 
 export default function DashboardPage() {

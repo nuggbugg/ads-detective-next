@@ -1,5 +1,7 @@
 "use client";
 
+import { ReactNode } from "react";
+
 export function Spinner() {
   return (
     <div className="spinner-wrapper">
@@ -21,17 +23,17 @@ export function EmptyState({
   title,
   description,
 }: {
-  icon?: string;
+  icon?: ReactNode;
   title: string;
   description: string;
 }) {
   return (
     <div className="empty-state">
       {icon && (
-        <div className="empty-state-icon" dangerouslySetInnerHTML={{ __html: icon }} />
+        <div className="empty-state-icon">{icon}</div>
       )}
       <h3 className="empty-state-title">{title}</h3>
-      <p className="empty-state-desc">{description}</p>
+      <p className="empty-state-description">{description}</p>
     </div>
   );
 }

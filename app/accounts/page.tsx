@@ -164,7 +164,7 @@ export default function AccountsPage() {
 
       {accounts.length === 0 ? (
         <EmptyState
-          icon='<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>'
+          icon={<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>}
           title="No accounts yet"
           description="Add a Meta ad account to start syncing creative data."
         />
@@ -271,7 +271,7 @@ export default function AccountsPage() {
               <option value="JPY">JPY (&yen;)</option>
               <option value="CHF">CHF</option>
               <option value="BRL">BRL (R$)</option>
-              <option value="INR">INR (&pound;)</option>
+              <option value="INR">INR (₹)</option>
             </select>
           </div>
         </div>
@@ -298,7 +298,7 @@ export default function AccountsPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="Delete Account"
-        message={`Are you sure you want to remove <strong>${deleteTarget?.name || ""}</strong>? This won't delete any synced creative data.`}
+        message={<>Are you sure you want to remove <strong>{deleteTarget?.name || ""}</strong>? This won&apos;t delete any synced creative data.</>}
         confirmLabel="Delete Account"
         confirmClass="btn-danger"
       />

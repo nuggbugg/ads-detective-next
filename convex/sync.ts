@@ -36,11 +36,11 @@ export const _syncAccountImpl = internalAction({
     if (!account) throw new Error("Account not found");
 
     // Get token
-    const token = await ctx.runQuery(api.settings.get, { key: "meta_access_token" });
+    const token = await ctx.runQuery(internal.settings.get, { key: "meta_access_token" });
     if (!token) throw new Error("Meta access token not configured");
 
     // Get date range
-    const dateRangeDays = await ctx.runQuery(api.settings.get, { key: "date_range_days" });
+    const dateRangeDays = await ctx.runQuery(internal.settings.get, { key: "date_range_days" });
     const days = parseInt(dateRangeDays || "30");
 
     const until = new Date().toISOString().split("T")[0];
