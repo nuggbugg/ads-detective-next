@@ -3,13 +3,28 @@
 const API_BASE = "https://graph.facebook.com/v21.0";
 
 export async function metaRequest(url: string, token: string) {
-  const separator = url.includes("?") ? "&" : "?";
-  const res = await fetch(`${url}${separator}access_token=${token}`);
+  // Strip access_token from URL if present (e.g. in pagination next-URLs)
+  const cleanUrl = stripAccessToken(url);
+  const res = await fetch(cleanUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const data = await res.json();
   if (data.error) {
     throw new Error(data.error.message || "Meta API error");
   }
   return data;
+}
+
+/** Remove access_token query parameter from a URL to avoid leaking it in logs. */
+function stripAccessToken(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete("access_token");
+    return parsed.toString();
+  } catch {
+    // If URL parsing fails, return as-is
+    return url;
+  }
 }
 
 export async function metaPaginate(url: string, token: string) {

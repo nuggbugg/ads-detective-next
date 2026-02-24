@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
@@ -141,5 +141,23 @@ export const updateAnalysis = mutation({
   },
   handler: async (ctx, { id, data }) => {
     await ctx.db.patch(id, { ...data, updated_at: new Date().toISOString() });
+  },
+});
+
+// Internal query used by analysis actions to fetch pending creatives via index
+export const listByAnalysisStatus = internalQuery({
+  args: {
+    status: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { status, limit }) => {
+    const query = ctx.db
+      .query("creatives")
+      .withIndex("by_analysis_status", (q) => q.eq("analysis_status", status));
+
+    if (limit) {
+      return await query.take(limit);
+    }
+    return await query.collect();
   },
 });

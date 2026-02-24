@@ -34,8 +34,15 @@ export const get = query({
       pending_count: allCreatives.filter((c) => c.analysis_status === "pending").length,
     };
 
+    // Read spend threshold from settings
+    const spendSetting = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "iteration_spend_threshold"))
+      .first();
+    const spendThreshold = parseFloat(spendSetting?.value ?? "") || 50;
+
     // Top performers — goal-aware
-    const qualified = allCreatives.filter((c) => c.spend > 10);
+    const qualified = allCreatives.filter((c) => c.spend > spendThreshold);
     let topPerformers;
     if (goal === "lead_gen") {
       topPerformers = qualified

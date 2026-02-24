@@ -332,7 +332,7 @@ export default function CreativesPage() {
                     <span className="cmm-value">
                       {selectedCreative.cpa > 0 ? fmt(selectedCreative.cpa) : "—"}
                     </span>
-                    <span className="cmm-label">Cost/Lead</span>
+                    <span className="cmm-label">{goal === "lead_gen" ? "Cost/Lead" : "CPA"}</span>
                   </div>
                   <div className="creative-modal-metric">
                     <span className="cmm-value">{selectedCreative.leads || selectedCreative.conversions || 0}</span>

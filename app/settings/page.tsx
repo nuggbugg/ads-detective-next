@@ -75,8 +75,8 @@ export default function SettingsPage() {
     setMetaTestResult(null);
 
     try {
-      await setMany({ settings: { meta_access_token: token } });
       const result = await testMeta({ token });
+      await setMany({ settings: { meta_access_token: token } });
 
       setMetaTestResult({
         type: "success",

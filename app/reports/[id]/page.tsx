@@ -22,8 +22,9 @@ function formatDate(ts: number) {
 export default function ReportDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
   const report = useQuery(api.reports.getById, {
-    id: params.id as Id<"reports">,
+    id: rawId as Id<"reports">,
   });
   const fmt = useCurrencyFormatter();
 
@@ -271,7 +272,7 @@ export default function ReportDetailPage() {
             <div className="report-doc-performer-list">
               {bottomPerfs.map((p: any, i: number) => (
                 <div key={p._id || i} className="report-doc-performer-card performer-bottom">
-                  <div className="performer-rank">#{topPerfs.length - bottomPerfs.length + i + 1}</div>
+                  <div className="performer-rank">#{report.creative_count - bottomPerfs.length + i + 1}</div>
                   <div className="performer-media">
                     {p.image_url ? (
                       <img src={p.image_url} alt="" />

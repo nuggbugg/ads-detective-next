@@ -78,13 +78,11 @@ export const _analyzeUnanalyzedImpl = internalAction({
     const apiKey = await ctx.runQuery(internal.settings.get, { key: "gemini_api_key" });
     if (!apiKey) return { analyzed: 0, errors: 0, total: 0 };
 
-    // Get pending creatives
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allCreatives: any = await ctx.runQuery(api.creatives.list, { analysis_status: "pending" });
-    const pending: Array<{ _id: string; analysis_status: string }> =
-      (allCreatives as Array<{ _id: string; analysis_status: string }>)
-        .filter((c) => c.analysis_status === "pending")
-        .slice(0, limit || 50);
+    // Get pending creatives directly via index
+    const pending = await ctx.runQuery(internal.creatives.listByAnalysisStatus, {
+      status: "pending",
+      limit: limit || 50,
+    });
 
     if (pending.length === 0) return { analyzed: 0, errors: 0, total: 0 };
 

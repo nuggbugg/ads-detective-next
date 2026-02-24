@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { CURRENCY_MAP } from "./lib/currency";
 
 // ── Helpers ──
 
@@ -18,26 +19,8 @@ type GoalConfig = {
 
 type CurrencyFormatter = (amount: number, decimals?: number) => string;
 
-const CURRENCY_SYMBOLS: Record<string, { symbol: string; position: "before" | "after" }> = {
-  USD: { symbol: "$", position: "before" }, EUR: { symbol: "€", position: "before" },
-  GBP: { symbol: "£", position: "before" }, SEK: { symbol: "kr", position: "after" },
-  NOK: { symbol: "kr", position: "after" }, DKK: { symbol: "kr", position: "after" },
-  ISK: { symbol: "kr", position: "after" }, CZK: { symbol: "Kč", position: "after" },
-  HUF: { symbol: "Ft", position: "after" }, PLN: { symbol: "zł", position: "after" },
-  RON: { symbol: "lei", position: "after" }, JPY: { symbol: "¥", position: "before" },
-  CNY: { symbol: "¥", position: "before" }, KRW: { symbol: "₩", position: "before" },
-  INR: { symbol: "₹", position: "before" }, BRL: { symbol: "R$", position: "before" },
-  AUD: { symbol: "A$", position: "before" }, CAD: { symbol: "C$", position: "before" },
-  CHF: { symbol: "CHF", position: "before" }, NZD: { symbol: "NZ$", position: "before" },
-  SGD: { symbol: "S$", position: "before" }, HKD: { symbol: "HK$", position: "before" },
-  TWD: { symbol: "NT$", position: "before" }, THB: { symbol: "฿", position: "before" },
-  TRY: { symbol: "₺", position: "before" }, ZAR: { symbol: "R", position: "before" },
-  ILS: { symbol: "₪", position: "before" }, PHP: { symbol: "₱", position: "before" },
-  MXN: { symbol: "$", position: "before" },
-};
-
 function makeCurrencyFormatter(currency: string): CurrencyFormatter {
-  const info = CURRENCY_SYMBOLS[currency] || { symbol: currency, position: "before" as const };
+  const info = CURRENCY_MAP[currency] || { symbol: currency, position: "before" as const };
   return (amount: number, decimals = 2) => {
     const num = (amount || 0).toFixed(decimals);
     return info.position === "after" ? `${num} ${info.symbol}` : `${info.symbol}${num}`;

@@ -5,11 +5,22 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const reports = await ctx.db.query("reports").order("desc").collect();
+    // Return only the scalar fields needed by the list page.
+    // Skip parsing top_performers, bottom_performers, comparison_data, etc.
     return reports.map((r) => ({
-      ...r,
-      top_performers: JSON.parse(r.top_performers || "[]"),
-      bottom_performers: JSON.parse(r.bottom_performers || "[]"),
-      comparison_data: r.comparison_data ? JSON.parse(r.comparison_data) : null,
+      _id: r._id,
+      _creationTime: r._creationTime,
+      account_id: r.account_id,
+      campaign_goal: r.campaign_goal,
+      total_spend: r.total_spend,
+      total_impressions: r.total_impressions,
+      avg_roas: r.avg_roas,
+      avg_ctr: r.avg_ctr,
+      avg_cpa: r.avg_cpa,
+      creative_count: r.creative_count,
+      window_start: r.window_start,
+      window_end: r.window_end,
+      window_days: r.window_days,
     }));
   },
 });

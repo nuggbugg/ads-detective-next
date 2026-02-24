@@ -1,57 +1,6 @@
 import { query, mutation, action, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-
-// Currency symbol map
-const CURRENCY_MAP: Record<string, { symbol: string; position: "before" | "after" }> = {
-  USD: { symbol: "$", position: "before" },
-  EUR: { symbol: "€", position: "before" },
-  GBP: { symbol: "£", position: "before" },
-  SEK: { symbol: "kr", position: "after" },
-  NOK: { symbol: "kr", position: "after" },
-  DKK: { symbol: "kr", position: "after" },
-  ISK: { symbol: "kr", position: "after" },
-  CZK: { symbol: "Kč", position: "after" },
-  HUF: { symbol: "Ft", position: "after" },
-  PLN: { symbol: "zł", position: "after" },
-  RON: { symbol: "lei", position: "after" },
-  JPY: { symbol: "¥", position: "before" },
-  CNY: { symbol: "¥", position: "before" },
-  KRW: { symbol: "₩", position: "before" },
-  INR: { symbol: "₹", position: "before" },
-  BRL: { symbol: "R$", position: "before" },
-  MXN: { symbol: "$", position: "before" },
-  AUD: { symbol: "A$", position: "before" },
-  CAD: { symbol: "C$", position: "before" },
-  CHF: { symbol: "CHF", position: "before" },
-  NZD: { symbol: "NZ$", position: "before" },
-  SGD: { symbol: "S$", position: "before" },
-  HKD: { symbol: "HK$", position: "before" },
-  TWD: { symbol: "NT$", position: "before" },
-  THB: { symbol: "฿", position: "before" },
-  TRY: { symbol: "₺", position: "before" },
-  ZAR: { symbol: "R", position: "before" },
-  RUB: { symbol: "₽", position: "after" },
-  ILS: { symbol: "₪", position: "before" },
-  AED: { symbol: "د.إ", position: "before" },
-  SAR: { symbol: "﷼", position: "before" },
-  PHP: { symbol: "₱", position: "before" },
-  MYR: { symbol: "RM", position: "before" },
-  IDR: { symbol: "Rp", position: "before" },
-  VND: { symbol: "₫", position: "after" },
-  ARS: { symbol: "$", position: "before" },
-  CLP: { symbol: "$", position: "before" },
-  COP: { symbol: "$", position: "before" },
-  PEN: { symbol: "S/", position: "before" },
-  UAH: { symbol: "₴", position: "before" },
-  NGN: { symbol: "₦", position: "before" },
-  EGP: { symbol: "E£", position: "before" },
-  PKR: { symbol: "₨", position: "before" },
-  BDT: { symbol: "৳", position: "before" },
-  QAR: { symbol: "﷼", position: "before" },
-  KWD: { symbol: "د.ك", position: "before" },
-  BHD: { symbol: ".د.ب", position: "before" },
-  OMR: { symbol: "﷼", position: "before" },
-};
+import { CURRENCY_MAP } from "./lib/currency";
 
 function maskSecret(value: string): string {
   if (!value || value.length < 10) return value ? "****" : "";
@@ -165,8 +114,10 @@ export const testMetaConnection = action({
   handler: async (_ctx, { token }) => {
     const API_BASE = "https://graph.facebook.com/v21.0";
 
+    const authHeaders = { Authorization: `Bearer ${token}` };
+
     // Test the token
-    const userRes = await fetch(`${API_BASE}/me?access_token=${token}`);
+    const userRes = await fetch(`${API_BASE}/me`, { headers: authHeaders });
     if (!userRes.ok) {
       const err = await userRes.json();
       throw new Error(err.error?.message || "Invalid token");
@@ -175,7 +126,8 @@ export const testMetaConnection = action({
 
     // Fetch ad accounts
     const accountsRes = await fetch(
-      `${API_BASE}/me/adaccounts?fields=account_id,id,name,account_status,currency&access_token=${token}`
+      `${API_BASE}/me/adaccounts?fields=account_id,id,name,account_status,currency`,
+      { headers: authHeaders }
     );
     if (!accountsRes.ok) {
       throw new Error("Failed to fetch ad accounts");
