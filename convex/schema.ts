@@ -94,6 +94,10 @@ export default defineSchema({
     previous_report_id: v.optional(v.id("reports")),
     comparison_data: v.optional(v.string()),
     raw_data: v.optional(v.string()),
+    funnel_breakdown: v.optional(v.string()),
+    creative_mix: v.optional(v.string()),
+    recommendations: v.optional(v.string()),
+    detailed_metrics: v.optional(v.string()),
   })
     .index("by_account_id", ["account_id"]),
 });
