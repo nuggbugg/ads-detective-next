@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageLoader } from "@/components/ui/Loader";
 import { useToast } from "@/components/ui/Toast";
 
@@ -25,8 +26,9 @@ export default function SettingsPage() {
   const [spendThreshold, setSpendThreshold] = useState("50");
   const [syncFrequency, setSyncFrequency] = useState("every_6h");
 
-  const connectShopify = useAction(api.shopify.connect);
+  const startShopifyOAuth = useAction(api.shopify.startOAuth);
   const disconnectShopify = useAction(api.shopify.disconnect);
+  const searchParams = useSearchParams();
 
   const [metaTesting, setMetaTesting] = useState(false);
   const [metaTestResult, setMetaTestResult] = useState<{
@@ -37,7 +39,6 @@ export default function SettingsPage() {
   const [savingGemini, setSavingGemini] = useState(false);
   const [savingParams, setSavingParams] = useState(false);
   const [seeded, setSeeded] = useState(false);
-  const [shopifyToken, setShopifyToken] = useState("");
   const [shopifyConnecting, setShopifyConnecting] = useState(false);
   const [shopifyDisconnecting, setShopifyDisconnecting] = useState(false);
   const [shopifyResult, setShopifyResult] = useState<{
@@ -71,11 +72,17 @@ export default function SettingsPage() {
       if (typeof settings.winner_cpa_threshold === "string") setCpaThreshold(settings.winner_cpa_threshold);
       if (typeof settings.iteration_spend_threshold === "string") setSpendThreshold(settings.iteration_spend_threshold);
       if (typeof settings.sync_frequency === "string") setSyncFrequency(settings.sync_frequency);
-      if (settings._has_shopify_token && typeof settings.shopify_access_token === "string") {
-        setShopifyToken(settings.shopify_access_token);
-      }
     }
   }, [settings]);
+
+  // Show success toast if redirected back from Shopify OAuth
+  useEffect(() => {
+    if (searchParams.get("shopify") === "connected") {
+      toast.success("Shopify connected successfully!");
+      // Clean the URL
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, [searchParams, toast]);
 
   if (!settings) return <PageLoader />;
 
@@ -129,27 +136,17 @@ export default function SettingsPage() {
   };
 
   const handleConnectShopify = async () => {
-    const token = shopifyToken.trim();
-    if (!token || token.includes("****")) {
-      toast.error("Please enter a Shopify access token");
-      return;
-    }
-
     setShopifyConnecting(true);
     setShopifyResult(null);
     try {
-      const result = await connectShopify({ token });
-      setShopifyResult({
-        type: "success",
-        message: `Connected to ${result.shop_name}`,
-      });
-      toast.success("Shopify connected successfully");
+      const { url } = await startShopifyOAuth({});
+      // Redirect to Shopify authorization page
+      window.location.href = url;
     } catch (err) {
       setShopifyResult({
         type: "error",
-        message: err instanceof Error ? err.message : "Connection failed",
+        message: err instanceof Error ? err.message : "Failed to start OAuth",
       });
-    } finally {
       setShopifyConnecting(false);
     }
   };
@@ -158,7 +155,6 @@ export default function SettingsPage() {
     setShopifyDisconnecting(true);
     try {
       await disconnectShopify();
-      setShopifyToken("");
       setShopifyResult(null);
       toast.success("Shopify disconnected");
     } catch {
@@ -290,24 +286,18 @@ export default function SettingsPage() {
             </div>
           </div>
           <p className="helper-text">
-            Paste your Shopify Admin API access token to track monthly sales on
-            the dashboard. Create a custom app in your Shopify admin to get one.
+            {settings._has_shopify_token
+              ? "Your Shopify store is connected. Monthly sales data will appear on the dashboard."
+              : "Connect your Shopify store to track monthly sales on the dashboard. You'll be redirected to Shopify to authorize access."}
           </p>
           <div className="input-group">
-            <input
-              type="password"
-              className="input"
-              placeholder="Enter Shopify access token"
-              value={shopifyToken}
-              onChange={(e) => setShopifyToken(e.target.value)}
-            />
             {settings._has_shopify_token ? (
               <button
                 className="btn btn-secondary"
                 onClick={handleDisconnectShopify}
                 disabled={shopifyDisconnecting}
               >
-                {shopifyDisconnecting ? "Disconnecting..." : "Disconnect"}
+                {shopifyDisconnecting ? "Disconnecting..." : "Disconnect Shopify"}
               </button>
             ) : (
               <button
@@ -315,7 +305,7 @@ export default function SettingsPage() {
                 onClick={handleConnectShopify}
                 disabled={shopifyConnecting}
               >
-                {shopifyConnecting ? "Connecting..." : "Save & Connect"}
+                {shopifyConnecting ? "Redirecting..." : "Connect Shopify"}
               </button>
             )}
           </div>

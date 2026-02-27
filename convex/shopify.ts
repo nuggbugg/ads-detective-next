@@ -1,38 +1,93 @@
 import { action, query, internalMutation } from "./_generated/server";
+import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 const SHOPIFY_STORE = "mobynutrition.myshopify.com";
+const SHOPIFY_CLIENT_ID = "1eeb3ae5b341187536602380c950b1c1";
 const SHOPIFY_API_VERSION = "2026-01";
+const SHOPIFY_SCOPES = "read_orders,read_products";
 const SALES_GOAL = 500;
 
-// --- Connect / Test ---
+// --- OAuth Flow ---
 
-export const connect = action({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
+/** Returns the Shopify authorize URL for the frontend to redirect to */
+export const startOAuth = action({
+  args: {},
+  handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Unauthenticated");
 
-    // Test the token by fetching shop info
-    const res = await fetch(
-      `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/shop.json`,
-      { headers: { "X-Shopify-Access-Token": token } }
-    );
+    const siteUrl = process.env.CONVEX_SITE_URL;
+    if (!siteUrl) throw new Error("CONVEX_SITE_URL not configured");
 
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Invalid token: ${err}`);
-    }
+    const redirectUri = `${siteUrl}/shopify/callback`;
+    const nonce = Math.random().toString(36).substring(2, 15);
 
-    const { shop } = (await res.json()) as { shop: { name: string } };
+    const authorizeUrl =
+      `https://${SHOPIFY_STORE}/admin/oauth/authorize` +
+      `?client_id=${SHOPIFY_CLIENT_ID}` +
+      `&scope=${SHOPIFY_SCOPES}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${nonce}`;
 
-    // Store the token
-    await ctx.runMutation(internal.shopify._storeToken, { token });
-
-    return { shop_name: shop.name };
+    return { url: authorizeUrl };
   },
+});
+
+/** HTTP callback handler — Shopify redirects here with ?code=...&shop=... */
+export const handleCallback = httpAction(async (ctx, request) => {
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const shop = url.searchParams.get("shop");
+
+  if (!code || !shop) {
+    return new Response("Missing code or shop parameter", { status: 400 });
+  }
+
+  const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+  if (!clientSecret) {
+    return new Response("Server misconfigured: missing SHOPIFY_CLIENT_SECRET", {
+      status: 500,
+    });
+  }
+
+  // Exchange the code for a permanent access token
+  const tokenRes = await fetch(
+    `https://${SHOPIFY_STORE}/admin/oauth/access_token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: SHOPIFY_CLIENT_ID,
+        client_secret: clientSecret,
+        code,
+      }),
+    }
+  );
+
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text();
+    console.error("Shopify token exchange failed:", errText);
+    return new Response(`Token exchange failed: ${errText}`, { status: 502 });
+  }
+
+  const tokenData = (await tokenRes.json()) as { access_token: string };
+  const accessToken = tokenData.access_token;
+
+  // Store the token in the database
+  await ctx.runMutation(internal.shopify._storeToken, { token: accessToken });
+
+  // Redirect user back to the app settings page with success
+  // Use SITE_URL env var (the Next.js app URL) or fallback
+  const appUrl = process.env.SITE_URL || "http://localhost:3000";
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: `${appUrl}/settings?shopify=connected`,
+    },
+  });
 });
 
 export const _storeToken = internalMutation({
