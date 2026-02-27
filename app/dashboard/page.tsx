@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useState } from "react";
 import { PageLoader } from "@/components/ui/Loader";
 import Link from "next/link";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
@@ -21,8 +22,21 @@ export default function DashboardPage() {
   const data = useQuery(api.dashboard.get);
   const settings = useQuery(api.settings.getAll);
   const fmt = useCurrencyFormatter();
+  const fetchSales = useAction(api.shopify.fetchMonthlySales);
+  const [refreshing, setRefreshing] = useState(false);
 
   if (!data) return <PageLoader />;
+
+  const handleRefreshSales = async () => {
+    setRefreshing(true);
+    try {
+      await fetchSales();
+    } catch {
+      // ignore — data will update reactively
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const hasToken = !!settings?._has_meta_token;
 
@@ -82,6 +96,55 @@ export default function DashboardPage() {
             <span>Account{(data.accounts?.active || 0) !== 1 ? "s" : ""}</span>
           </div>
         </div>
+
+        {/* Sales Goal Progress */}
+        {data.has_shopify && data.sales_goal && (
+          <div className="goal-progress">
+            <div className="goal-progress-header">
+              <div className="goal-progress-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+                </svg>
+                <span>Monthly Sales Goal</span>
+                <span className="goal-progress-month">{data.sales_goal.month}</span>
+              </div>
+              <button
+                className="goal-progress-refresh"
+                onClick={handleRefreshSales}
+                disabled={refreshing}
+                title="Refresh from Shopify"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" className={refreshing ? "spin" : ""}>
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+                </svg>
+              </button>
+            </div>
+            <div className="goal-progress-bar-container">
+              <div className="goal-progress-bar-track">
+                <div
+                  className="goal-progress-bar-fill"
+                  style={{ width: `${Math.min((data.sales_goal.sold / data.sales_goal.goal) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="goal-progress-stats">
+              <span className="goal-progress-count">
+                <strong>{data.sales_goal.sold}</strong> / {data.sales_goal.goal} boxes
+              </span>
+              <span className="goal-progress-pct">
+                {Math.round((data.sales_goal.sold / data.sales_goal.goal) * 100)}%
+              </span>
+            </div>
+          </div>
+        )}
+        {data.has_shopify && !data.sales_goal && (
+          <div className="goal-progress goal-progress-empty">
+            <span>Shopify connected</span>
+            <button className="btn btn-sm btn-primary" onClick={handleRefreshSales} disabled={refreshing}>
+              {refreshing ? "Loading..." : "Fetch Sales Data"}
+            </button>
+          </div>
+        )}
 
         <div className="dash-content">
           <div className="dash-header">

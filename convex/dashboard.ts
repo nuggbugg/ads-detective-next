@@ -90,6 +90,26 @@ export const get = query({
 
     const activeAccounts = allAccounts.filter((a) => a.is_active);
 
+    // Shopify sales goal
+    const shopifyToken = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", "shopify_access_token"))
+      .first();
+    let salesGoal: { sold: number; goal: number; month: string; last_fetched: string } | null = null;
+    if (shopifyToken?.value) {
+      const cached = await ctx.db
+        .query("settings")
+        .withIndex("by_key", (q) => q.eq("key", "shopify_sales"))
+        .first();
+      if (cached) {
+        try {
+          salesGoal = JSON.parse(cached.value);
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     return {
       metrics,
       accounts: {
@@ -104,6 +124,8 @@ export const get = query({
       },
       top_performers: topPerformersWithImages,
       campaign_goal: goal,
+      sales_goal: salesGoal,
+      has_shopify: !!shopifyToken?.value,
     };
   },
 });

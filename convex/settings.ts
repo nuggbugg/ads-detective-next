@@ -11,6 +11,7 @@ function maskSecret(value: string): string {
 const ALLOWED_KEYS = [
   "meta_access_token",
   "gemini_api_key",
+  "shopify_access_token",
   "date_range_days",
   "sync_frequency",
   "campaign_goal",
@@ -38,8 +39,12 @@ export const getAll = query({
     if (result.gemini_api_key) {
       masked.gemini_api_key = maskSecret(result.gemini_api_key);
     }
+    if (result.shopify_access_token) {
+      masked.shopify_access_token = maskSecret(result.shopify_access_token);
+    }
     masked._has_meta_token = !!result.meta_access_token;
     masked._has_gemini_key = !!result.gemini_api_key;
+    masked._has_shopify_token = !!result.shopify_access_token;
     return masked;
   },
 });

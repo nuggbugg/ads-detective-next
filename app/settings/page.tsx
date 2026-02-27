@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageLoader } from "@/components/ui/Loader";
 import { useToast } from "@/components/ui/Toast";
 
@@ -25,6 +26,9 @@ export default function SettingsPage() {
   const [spendThreshold, setSpendThreshold] = useState("50");
   const [syncFrequency, setSyncFrequency] = useState("every_6h");
 
+  const startShopifyOAuth = useAction(api.shopify.startOAuth);
+  const disconnectShopify = useAction(api.shopify.disconnect);
+
   const [metaTesting, setMetaTesting] = useState(false);
   const [metaTestResult, setMetaTestResult] = useState<{
     type: "success" | "error";
@@ -34,6 +38,18 @@ export default function SettingsPage() {
   const [savingGemini, setSavingGemini] = useState(false);
   const [savingParams, setSavingParams] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  const [shopifyConnecting, setShopifyConnecting] = useState(false);
+  const [shopifyDisconnecting, setShopifyDisconnecting] = useState(false);
+
+  const searchParams = useSearchParams();
+
+  // Show toast when returning from Shopify OAuth
+  useEffect(() => {
+    if (searchParams.get("shopify") === "connected") {
+      toast.success("Shopify connected successfully");
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, [searchParams, toast]);
 
   // Seed defaults once
   useEffect(() => {
@@ -112,6 +128,29 @@ export default function SettingsPage() {
       toast.error("Failed to save key");
     } finally {
       setSavingGemini(false);
+    }
+  };
+
+  const handleConnectShopify = async () => {
+    setShopifyConnecting(true);
+    try {
+      const { url } = await startShopifyOAuth();
+      window.location.href = url;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to start Shopify connection");
+      setShopifyConnecting(false);
+    }
+  };
+
+  const handleDisconnectShopify = async () => {
+    setShopifyDisconnecting(true);
+    try {
+      await disconnectShopify();
+      toast.success("Shopify disconnected");
+    } catch {
+      toast.error("Failed to disconnect Shopify");
+    } finally {
+      setShopifyDisconnecting(false);
     }
   };
 
@@ -222,6 +261,41 @@ export default function SettingsPage() {
               {savingGemini ? "Saving..." : "Save Key"}
             </button>
           </div>
+        </div>
+
+        {/* Shopify Connection */}
+        <div className="settings-card">
+          <div className="card-header">
+            <h3>Shopify Connection</h3>
+            <div
+              className={`connection-status ${
+                settings._has_shopify_token ? "status-connected" : "status-disconnected"
+              }`}
+            >
+              {settings._has_shopify_token ? "Connected" : "Not Connected"}
+            </div>
+          </div>
+          <p className="helper-text">
+            Connect your Shopify store to track monthly sales progress on the
+            dashboard. Uses OAuth for secure access.
+          </p>
+          {settings._has_shopify_token ? (
+            <button
+              className="btn btn-secondary"
+              onClick={handleDisconnectShopify}
+              disabled={shopifyDisconnecting}
+            >
+              {shopifyDisconnecting ? "Disconnecting..." : "Disconnect Shopify"}
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={handleConnectShopify}
+              disabled={shopifyConnecting}
+            >
+              {shopifyConnecting ? "Redirecting..." : "Connect Shopify"}
+            </button>
+          )}
         </div>
 
         {/* Analysis Parameters */}

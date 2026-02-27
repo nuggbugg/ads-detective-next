@@ -21,6 +21,7 @@ import type * as lib_currency from "../lib/currency.js";
 import type * as meta from "../meta.js";
 import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
+import type * as shopify from "../shopify.js";
 import type * as sync from "../sync.js";
 
 import type {
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   meta: typeof meta;
   reports: typeof reports;
   settings: typeof settings;
+  shopify: typeof shopify;
   sync: typeof sync;
 }>;
 
