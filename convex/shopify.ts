@@ -1,77 +1,38 @@
-import { action, query, internalMutation, httpAction } from "./_generated/server";
+import { action, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 const SHOPIFY_STORE = "mobynutrition.myshopify.com";
-const SHOPIFY_CLIENT_ID = "1eeb3ae5b341187536602380c950b1c1";
-const SHOPIFY_SCOPES = "read_orders,read_all_orders,read_products,read_inventory";
 const SHOPIFY_API_VERSION = "2026-01";
 const SALES_GOAL = 500;
 
-// --- OAuth ---
+// --- Connect / Test ---
 
-export const startOAuth = action({
-  args: {},
-  handler: async (ctx) => {
+export const connect = action({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Unauthenticated");
 
-    const siteUrl = process.env.CONVEX_SITE_URL;
-    if (!siteUrl) throw new Error("CONVEX_SITE_URL not configured");
+    // Test the token by fetching shop info
+    const res = await fetch(
+      `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/shop.json`,
+      { headers: { "X-Shopify-Access-Token": token } }
+    );
 
-    const redirectUri = `${siteUrl}/shopify/callback`;
-    const authorizeUrl =
-      `https://${SHOPIFY_STORE}/admin/oauth/authorize` +
-      `?client_id=${SHOPIFY_CLIENT_ID}` +
-      `&scope=${SHOPIFY_SCOPES}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}`;
-
-    return { url: authorizeUrl };
-  },
-});
-
-export const handleCallback = httpAction(async (ctx, request) => {
-  const url = new URL(request.url);
-  const code = url.searchParams.get("code");
-  const shop = url.searchParams.get("shop");
-
-  if (!code || !shop) {
-    return new Response("Missing code or shop parameter", { status: 400 });
-  }
-
-  // Exchange code for permanent access token
-  const tokenRes = await fetch(
-    `https://${SHOPIFY_STORE}/admin/oauth/access_token`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: SHOPIFY_CLIENT_ID,
-        client_secret: process.env.SHOPIFY_CLIENT_SECRET!,
-        code,
-      }),
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Invalid token: ${err}`);
     }
-  );
 
-  if (!tokenRes.ok) {
-    const err = await tokenRes.text();
-    return new Response(`Failed to exchange token: ${err}`, { status: 500 });
-  }
+    const { shop } = (await res.json()) as { shop: { name: string } };
 
-  const { access_token } = (await tokenRes.json()) as { access_token: string };
+    // Store the token
+    await ctx.runMutation(internal.shopify._storeToken, { token });
 
-  // Store the token in settings
-  await ctx.runMutation(internal.shopify._storeToken, {
-    token: access_token,
-  });
-
-  // Redirect back to the app settings page
-  const appUrl = process.env.SITE_URL || "http://localhost:3001";
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `${appUrl}/settings?shopify=connected` },
-  });
+    return { shop_name: shop.name };
+  },
 });
 
 export const _storeToken = internalMutation({
