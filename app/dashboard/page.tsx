@@ -2,7 +2,7 @@
 
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PageLoader } from "@/components/ui/Loader";
 import Link from "next/link";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
@@ -24,6 +24,27 @@ export default function DashboardPage() {
   const fmt = useCurrencyFormatter();
   const fetchSales = useAction(api.shopify.fetchMonthlySales);
   const [refreshing, setRefreshing] = useState(false);
+  const autoFetchedRef = useRef(false);
+
+  // Auto-fetch sales when Shopify is connected but no cached data,
+  // or when cached data is older than 1 hour
+  useEffect(() => {
+    if (!data || autoFetchedRef.current) return;
+    if (!data.has_shopify) return;
+
+    const needsFetch =
+      !data.sales_goal ||
+      (data.sales_goal.last_fetched &&
+        Date.now() - new Date(data.sales_goal.last_fetched).getTime() > 60 * 60 * 1000);
+
+    if (needsFetch) {
+      autoFetchedRef.current = true;
+      setRefreshing(true);
+      fetchSales()
+        .catch(() => {})
+        .finally(() => setRefreshing(false));
+    }
+  }, [data, fetchSales]);
 
   if (!data) return <PageLoader />;
 
@@ -139,10 +160,12 @@ export default function DashboardPage() {
         )}
         {data.has_shopify && !data.sales_goal && (
           <div className="goal-progress goal-progress-empty">
-            <span>Shopify connected</span>
-            <button className="btn btn-sm btn-primary" onClick={handleRefreshSales} disabled={refreshing}>
-              {refreshing ? "Loading..." : "Fetch Sales Data"}
-            </button>
+            <span>{refreshing ? "Loading sales data..." : "Shopify connected — waiting for data"}</span>
+            {refreshing && (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" className="spin">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+              </svg>
+            )}
           </div>
         )}
 
