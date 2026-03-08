@@ -1,140 +1,179 @@
 "use client";
 
-import { useAction, useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageLoader } from "@/components/ui/Loader";
+
+type Variant = {
+  variant_id: string;
+  concept_id: string;
+  stage: string;
+  format: string;
+  hook: string;
+  angle: string;
+  hypothesis: string;
+  status: string;
+  version: string;
+};
+
+type Concept = {
+  concept_id: string;
+  name: string;
+};
+
+type Snapshot = {
+  variant_id: string;
+  spend?: number;
+  ctr?: number;
+  cpl?: number;
+  frequency?: number;
+  thumbstop?: number;
+  taken_at?: string;
+};
+
+type Decision = {
+  variant_id: string;
+  action: "scale" | "iterate" | "pause";
+  reason: string;
+  decided_at?: string;
+};
+
+type BoardData = {
+  baseline: { ctr: number; cpl: number };
+  stages: string[];
+  concepts: Concept[];
+  variants: Variant[];
+  performance?: Snapshot[];
+  decisions?: Decision[];
+};
 
 const STAGE_META: Record<string, { label: string; tone: string }> = {
   backlog: { label: "Backlog", tone: "co-backlog" },
-  drafting: { label: "Drafting", tone: "co-drafting" },
-  testing: { label: "Testing", tone: "co-testing" },
-  scaling: { label: "Scaling", tone: "co-scaling" },
-  decided: { label: "Decided", tone: "co-decided" },
+  briefed: { label: "Briefed", tone: "co-drafting" },
+  designed: { label: "Designed", tone: "co-testing" },
+  ready: { label: "Ready", tone: "co-scaling" },
+  live: { label: "Live", tone: "co-testing" },
+  iterating: { label: "Iterating", tone: "co-drafting" },
+  scaled: { label: "Scaled", tone: "co-scaling" },
+  paused: { label: "Paused", tone: "co-decided" },
 };
 
-function pct(value: number) {
-  return `${value.toFixed(2)}%`;
-}
-
-function money(value: number) {
-  return `$${value.toFixed(2)}`;
-}
+const pct = (n?: number) => (n == null ? "-" : `${n.toFixed(2)}%`);
+const money = (n?: number) => (n == null ? "-" : `${n.toFixed(2)} kr`);
 
 export default function CreativeOSPage() {
-  const board = useQuery(api.creativeOs.getBoard);
-  const seedDemo = useMutation(api.creativeOs.seedDemoData);
-  const syncPerformance = useAction(api.creativeOs.syncPerformance);
-  const [busy, setBusy] = useState<"seed" | "sync" | null>(null);
+  const [data, setData] = useState<BoardData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  if (board === undefined) return <PageLoader />;
-  if (board === null) return null;
+  useEffect(() => {
+    let mounted = true;
+    fetch("/creative-os/data.json")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((json) => {
+        if (mounted) setData(json);
+      })
+      .catch((e) => {
+        if (mounted) setError(String(e?.message || e));
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-  const seed = async () => {
-    setBusy("seed");
-    try {
-      await seedDemo({});
-    } finally {
-      setBusy(null);
-    }
-  };
+  const latestByVariant = useMemo(() => {
+    const map: Record<string, Snapshot> = {};
+    (data?.performance || []).forEach((p) => {
+      if (!map[p.variant_id] || (map[p.variant_id].taken_at || "") < (p.taken_at || "")) {
+        map[p.variant_id] = p;
+      }
+    });
+    return map;
+  }, [data]);
 
-  const sync = async () => {
-    setBusy("sync");
-    try {
-      await syncPerformance({ source: "meta_ads" });
-    } finally {
-      setBusy(null);
-    }
-  };
+  const latestDecision = useMemo(() => {
+    const map: Record<string, Decision> = {};
+    (data?.decisions || []).forEach((d) => {
+      if (!map[d.variant_id] || (map[d.variant_id].decided_at || "") < (d.decided_at || "")) {
+        map[d.variant_id] = d;
+      }
+    });
+    return map;
+  }, [data]);
 
-  const hasConcepts = board.concepts.length > 0;
+  if (error) {
+    return (
+      <div className="page-content creative-os-page">
+        <div className="empty-state">
+          <div className="empty-state-icon">⚠️</div>
+          <h3 className="empty-state-title">Creative OS kunde inte laddas</h3>
+          <p className="empty-state-description">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return <PageLoader />;
+
+  const scaled = data.variants.filter((v) => v.status === "scaled").length;
+  const iter = data.variants.filter((v) => v.status === "iterating").length;
+  const paused = data.variants.filter((v) => v.status === "paused").length;
 
   return (
     <div className="page-content creative-os-page">
       <div className="creative-os-header">
         <div>
           <h2>Creative OS</h2>
-          <p className="page-subtitle">Native creative pipeline with concept → variant → performance → decision tracking.</p>
-        </div>
-        <div className="creative-os-actions">
-          <button className="btn btn-secondary" onClick={seed} disabled={busy !== null || hasConcepts}>
-            {busy === "seed" ? "Seeding..." : hasConcepts ? "Demo loaded" : "Load demo pipeline"}
-          </button>
-          <button className="btn btn-primary" onClick={sync} disabled={busy !== null || !hasConcepts}>
-            {busy === "sync" ? "Syncing..." : "Sync performance"}
-          </button>
+          <p className="page-subtitle">Reseller lead pipeline + KPI board</p>
         </div>
       </div>
 
-      {board.last_sync && (
-        <div className="creative-os-sync-meta">
-          Last sync: <strong>{new Date(board.last_sync.started_at).toLocaleString()}</strong> · {board.last_sync.records_updated} variants updated
-        </div>
-      )}
+      <div className="creative-os-sync-meta">
+        Baseline CTR: <strong>{data.baseline.ctr}%</strong> · Baseline CPL: <strong>{data.baseline.cpl} kr</strong> · Scaled: <strong>{scaled}</strong> · Iterating: <strong>{iter}</strong> · Paused: <strong>{paused}</strong>
+      </div>
 
-      {!hasConcepts ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🧪</div>
-          <h3 className="empty-state-title">No Creative OS concepts yet</h3>
-          <p className="empty-state-description">
-            Start by loading demo data or wire your ingestion action to push live creative concepts.
-          </p>
-        </div>
-      ) : (
-        <div className="creative-os-board">
-          {board.stages.map((stageKey) => {
-            const stage = STAGE_META[stageKey] || { label: stageKey, tone: "co-backlog" };
-            const concepts = board.concepts.filter((concept) => concept.status === stageKey);
+      <div className="creative-os-board">
+        {data.stages.map((stageKey) => {
+          const stage = STAGE_META[stageKey] || { label: stageKey, tone: "co-backlog" };
+          const variants = data.variants.filter((v) => v.status === stageKey);
 
-            return (
-              <section className="creative-os-column" key={stageKey}>
-                <header className={`creative-os-column-header ${stage.tone}`}>
-                  <span>{stage.label}</span>
-                  <span className="count-badge">{concepts.length}</span>
-                </header>
+          return (
+            <section className="creative-os-column" key={stageKey}>
+              <header className={`creative-os-column-header ${stage.tone}`}>
+                <span>{stage.label}</span>
+                <span className="count-badge">{variants.length}</span>
+              </header>
 
-                <div className="creative-os-cards">
-                  {concepts.map((concept) => (
-                    <article className="creative-os-card" key={concept._id}>
+              <div className="creative-os-cards">
+                {variants.map((variant) => {
+                  const concept = data.concepts.find((c) => c.concept_id === variant.concept_id);
+                  const p = latestByVariant[variant.variant_id];
+                  const dec = latestDecision[variant.variant_id];
+                  const decClass = dec?.action === "scale" ? "badge-teal" : dec?.action === "iterate" ? "badge-amber" : "badge-purple";
+
+                  return (
+                    <article className="creative-os-card" key={variant.variant_id}>
                       <div className="creative-os-card-top">
-                        <h3>{concept.title}</h3>
-                        <span className={`badge badge-${concept.priority === "high" ? "teal" : concept.priority === "medium" ? "amber" : "purple"}`}>
-                          {concept.priority}
-                        </span>
+                        <h3>{variant.hook}</h3>
+                        {dec && <span className={`badge ${decClass}`}>{dec.action}</span>}
                       </div>
-                      {concept.hypothesis && <p className="creative-os-hypothesis">{concept.hypothesis}</p>}
+                      <p className="creative-os-hypothesis">{concept?.name || variant.concept_id} · {variant.stage} · {variant.format} · {variant.version}</p>
+                      <p className="creative-os-hypothesis">Hypotes: {variant.hypothesis}</p>
 
                       <div className="creative-os-metrics">
-                        <div><span>ROAS</span><strong>{concept.metrics.roas.toFixed(2)}x</strong></div>
-                        <div><span>CTR</span><strong>{pct(concept.metrics.ctr)}</strong></div>
-                        <div><span>Spend</span><strong>{money(concept.metrics.spend)}</strong></div>
-                      </div>
-
-                      <div className="creative-os-variants">
-                        {concept.variants.length === 0 && <p className="cell-muted">No variants yet</p>}
-                        {concept.variants.map((variant) => (
-                          <div className="creative-os-variant" key={variant._id}>
-                            <div>
-                              <strong>{variant.name}</strong>
-                              <span>{variant.format || "Creative"} · {variant.channel || "Channel n/a"}</span>
-                            </div>
-                            <div className="creative-os-variant-metrics">
-                              <span>{variant.metrics.roas.toFixed(2)}x</span>
-                              <span>{pct(variant.metrics.ctr)}</span>
-                              <span>{money(variant.metrics.spend)}</span>
-                            </div>
-                          </div>
-                        ))}
+                        <div><span>CTR</span><strong>{pct(p?.ctr)}</strong></div>
+                        <div><span>CPL</span><strong>{money(p?.cpl)}</strong></div>
+                        <div><span>Spend</span><strong>{money(p?.spend)}</strong></div>
                       </div>
                     </article>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
