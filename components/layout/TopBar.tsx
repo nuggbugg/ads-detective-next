@@ -29,6 +29,17 @@ const navItems = [
     position: "left" as const,
   },
   {
+    tab: "creative-os",
+    label: "Creative OS",
+    href: "/creative-os",
+    icon: (
+      <svg className="nav-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" />
+      </svg>
+    ),
+    position: "left" as const,
+  },
+  {
     tab: "analytics",
     label: "Analytics",
     href: "/analytics",
