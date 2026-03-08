@@ -2,8 +2,110 @@
   "objective": "reseller_leads",
   "baseline": { "ctr": 0.5, "cpl": 37.78 },
   "stages": ["backlog","briefed","designed","ready","live","iterating","scaled","paused"],
-  "concepts": [],
-  "variants": [],
-  "performance": [],
-  "decisions": []
+  "concepts": [
+    {"concept_id":"c_reseller_usp","name":"Reseller USP Static","organizing_principle":"product-first","audience":"retail buyers"},
+    {"concept_id":"c_thumbstop_daily_edge","name":"Daily Edge Thumbstop","organizing_principle":"desire","audience":"DTC shoppers"},
+    {"concept_id":"c_work_workout","name":"Work x Workout","organizing_principle":"desire","audience":"busy professionals"},
+    {"concept_id":"c_no_hassle","name":"No Hassle","organizing_principle":"pain","audience":"new creatine users"}
+  ],
+  "variants": [
+    {
+      "variant_id":"MOBY_B2B_Reseller_USP_Static_v1",
+      "concept_id":"c_reseller_usp",
+      "stage":"product",
+      "format":"static",
+      "hook":"BLI ÅTERFÖRSÄLJARE AV MOBY",
+      "angle":"Produkt-USP",
+      "hypothesis":"Produktnära USP-copy ökar lead intent hos återförsäljare",
+      "status":"ready",
+      "version":"v1"
+    },
+    {
+      "variant_id":"MOBY_B2B_Reseller_USP_Static_v2",
+      "concept_id":"c_reseller_usp",
+      "stage":"product",
+      "format":"static",
+      "hook":"5g kreatinmonohydrat per stick",
+      "angle":"Kort copy / hög tydlighet",
+      "hypothesis":"Kortare copy förbättrar läsbarhet och form starts",
+      "status":"briefed",
+      "version":"v2"
+    },
+    {
+      "variant_id":"MOBY_B2B_Reseller_Proof_Static_v1",
+      "concept_id":"c_reseller_usp",
+      "stage":"most-aware",
+      "format":"static",
+      "hook":"Sälj i box eller styckvis med god marginal",
+      "angle":"Commercial proof",
+      "hypothesis":"Commercial angle förbättrar lead-kvalitet",
+      "status":"backlog",
+      "version":"v1"
+    },
+    {
+      "variant_id":"MOBY_D2C_DailyEdge_Thumbstop_A_v1",
+      "concept_id":"c_thumbstop_daily_edge",
+      "stage":"solution",
+      "format":"static",
+      "hook":"Din enklaste performance-rutin",
+      "angle":"Thumbstop close-up",
+      "hypothesis":"Dramatisk close-up ökar thumbstop och CTR",
+      "status":"scaled",
+      "version":"v1"
+    },
+    {
+      "variant_id":"MOBY_D2C_DailyEdge_Thumbstop_B_v1",
+      "concept_id":"c_thumbstop_daily_edge",
+      "stage":"solution",
+      "format":"static",
+      "hook":"5g fokus i fickformat",
+      "angle":"Aggressiv framåtrörelse",
+      "hypothesis":"Hög kontrast + rörelse förbättrar scroll-stop",
+      "status":"scaled",
+      "version":"v1"
+    },
+    {
+      "variant_id":"MOBY_D2C_DailyEdge_v2B_4K",
+      "concept_id":"c_thumbstop_daily_edge",
+      "stage":"product",
+      "format":"static",
+      "hook":"Ren hero-layout",
+      "angle":"Premium refinement",
+      "hypothesis":"Renare layout ökar conversion-klarhet",
+      "status":"ready",
+      "version":"v2B"
+    },
+    {
+      "variant_id":"MOBY_D2C_WorkWorkout_v1",
+      "concept_id":"c_work_workout",
+      "stage":"problem",
+      "format":"static",
+      "hook":"Från möte till pass",
+      "angle":"Dual use-case",
+      "hypothesis":"Vardag + träning ger bredare resonans",
+      "status":"designed",
+      "version":"v1"
+    },
+    {
+      "variant_id":"MOBY_D2C_NoHassle_v1",
+      "concept_id":"c_no_hassle",
+      "stage":"problem",
+      "format":"static",
+      "hook":"Ingen shaker. Inget meck.",
+      "angle":"Convenience first",
+      "hypothesis":"Låg friktion förbättrar första köpintresse",
+      "status":"designed",
+      "version":"v1"
+    }
+  ],
+  "performance": [
+    {"variant_id":"MOBY_D2C_DailyEdge_Thumbstop_A_v1","spend":1201.4,"ctr":0.96,"cpl":29.8,"frequency":2.0,"thumbstop":28.6,"taken_at":"2026-03-08T15:37:00Z"},
+    {"variant_id":"MOBY_D2C_DailyEdge_Thumbstop_B_v1","spend":432.2,"ctr":0.74,"cpl":34.1,"frequency":1.5,"thumbstop":24.3,"taken_at":"2026-03-08T15:37:00Z"},
+    {"variant_id":"MOBY_D2C_NoHassle_v1","spend":288.0,"ctr":0.49,"cpl":42.7,"frequency":1.7,"thumbstop":21.2,"taken_at":"2026-03-08T15:37:00Z"}
+  ],
+  "decisions": [
+    {"variant_id":"MOBY_D2C_DailyEdge_Thumbstop_A_v1","action":"scale","reason":"CTR/CPL beat baseline","decided_at":"2026-03-08T15:38:00Z"},
+    {"variant_id":"MOBY_D2C_DailyEdge_Thumbstop_B_v1","action":"scale","reason":"CTR/CPL beat baseline","decided_at":"2026-03-08T15:38:00Z"},
+    {"variant_id":"MOBY_D2C_NoHassle_v1","action":"iterate","reason":"Good stop, weak click/cost","decided_at":"2026-03-08T15:38:00Z"}
+  ]
 }
