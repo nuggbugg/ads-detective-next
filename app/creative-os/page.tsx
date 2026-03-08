@@ -18,6 +18,7 @@ type Variant = {
 type Concept = {
   concept_id: string;
   name: string;
+  audience?: string;
 };
 
 type Snapshot = {
@@ -38,31 +39,49 @@ type Decision = {
 };
 
 type BoardData = {
-  baseline: { ctr: number; cpl: number };
-  stages: string[];
+  baseline?: { ctr: number; cpl: number };
+  stages?: string[];
   concepts: Concept[];
   variants: Variant[];
   performance?: Snapshot[];
   decisions?: Decision[];
 };
 
-const STAGE_META: Record<string, { label: string; tone: string }> = {
-  backlog: { label: "Backlog", tone: "co-backlog" },
-  briefed: { label: "Briefed", tone: "co-drafting" },
-  designed: { label: "Designed", tone: "co-testing" },
-  ready: { label: "Ready", tone: "co-scaling" },
-  live: { label: "Live", tone: "co-testing" },
-  iterating: { label: "Iterating", tone: "co-drafting" },
-  scaled: { label: "Scaled", tone: "co-scaling" },
-  paused: { label: "Paused", tone: "co-decided" },
-};
+type FlowColumnKey =
+  | "problem_desire"
+  | "hooks"
+  | "concepts"
+  | "designed"
+  | "ready_to_test"
+  | "winners";
 
-const pct = (n?: number) => (n == null ? "-" : `${n.toFixed(2)}%`);
-const money = (n?: number) => (n == null ? "-" : `${n.toFixed(2)} kr`);
+const FLOW_COLUMNS: Array<{ key: FlowColumnKey; label: string; tone: string }> = [
+  { key: "problem_desire", label: "Problem / Desire", tone: "co-backlog" },
+  { key: "hooks", label: "Hooks", tone: "co-drafting" },
+  { key: "concepts", label: "Concepts", tone: "co-testing" },
+  { key: "designed", label: "Designed", tone: "co-testing" },
+  { key: "ready_to_test", label: "Ready to Test", tone: "co-scaling" },
+  { key: "winners", label: "Winners", tone: "co-decided" },
+];
+
+const formatPct = (n?: number) => (n == null ? null : `${n.toFixed(2)}%`);
+const formatMoney = (n?: number) => (n == null ? null : `${n.toFixed(2)} kr`);
+
+function toFlowColumn(variant: Variant): FlowColumnKey {
+  if (variant.status === "scaled" || variant.status === "live") return "winners";
+  if (variant.status === "ready") return "ready_to_test";
+  if (variant.status === "designed" || variant.status === "iterating") return "designed";
+  if (variant.status === "briefed") return "concepts";
+  if (variant.status === "backlog") return "hooks";
+
+  if (variant.stage === "problem" || variant.stage === "desire") return "problem_desire";
+  return "hooks";
+}
 
 export default function CreativeOSPage() {
   const [data, setData] = useState<BoardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSignals, setShowSignals] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -82,21 +101,19 @@ export default function CreativeOSPage() {
     };
   }, []);
 
+  const conceptsById = useMemo(() => {
+    const map: Record<string, Concept> = {};
+    (data?.concepts || []).forEach((concept) => {
+      map[concept.concept_id] = concept;
+    });
+    return map;
+  }, [data]);
+
   const latestByVariant = useMemo(() => {
     const map: Record<string, Snapshot> = {};
     (data?.performance || []).forEach((p) => {
       if (!map[p.variant_id] || (map[p.variant_id].taken_at || "") < (p.taken_at || "")) {
         map[p.variant_id] = p;
-      }
-    });
-    return map;
-  }, [data]);
-
-  const latestDecision = useMemo(() => {
-    const map: Record<string, Decision> = {};
-    (data?.decisions || []).forEach((d) => {
-      if (!map[d.variant_id] || (map[d.variant_id].decided_at || "") < (d.decided_at || "")) {
-        map[d.variant_id] = d;
       }
     });
     return map;
@@ -116,56 +133,74 @@ export default function CreativeOSPage() {
 
   if (!data) return <PageLoader />;
 
-  const scaled = data.variants.filter((v) => v.status === "scaled").length;
-  const iter = data.variants.filter((v) => v.status === "iterating").length;
-  const paused = data.variants.filter((v) => v.status === "paused").length;
-
   return (
     <div className="page-content creative-os-page">
       <div className="creative-os-header">
         <div>
           <h2>Creative OS</h2>
-          <p className="page-subtitle">Reseller lead pipeline + KPI board</p>
+          <p className="page-subtitle">Creative idea flow from first spark to test-ready winners.</p>
         </div>
       </div>
 
       <div className="creative-os-sync-meta">
-        Baseline CTR: <strong>{data.baseline.ctr}%</strong> · Baseline CPL: <strong>{data.baseline.cpl} kr</strong> · Scaled: <strong>{scaled}</strong> · Iterating: <strong>{iter}</strong> · Paused: <strong>{paused}</strong>
+        <span>{data.variants.length} ideas on board</span>
+        <label className="creative-os-signals-toggle">
+          <input
+            type="checkbox"
+            checked={showSignals}
+            onChange={(e) => setShowSignals(e.target.checked)}
+          />
+          Show lightweight signals
+        </label>
       </div>
 
       <div className="creative-os-board">
-        {data.stages.map((stageKey) => {
-          const stage = STAGE_META[stageKey] || { label: stageKey, tone: "co-backlog" };
-          const variants = data.variants.filter((v) => v.status === stageKey);
+        {FLOW_COLUMNS.map((column) => {
+          const variants = data.variants.filter((variant) => toFlowColumn(variant) === column.key);
 
           return (
-            <section className="creative-os-column" key={stageKey}>
-              <header className={`creative-os-column-header ${stage.tone}`}>
-                <span>{stage.label}</span>
+            <section className="creative-os-column" key={column.key}>
+              <header className={`creative-os-column-header ${column.tone}`}>
+                <span>{column.label}</span>
                 <span className="count-badge">{variants.length}</span>
               </header>
 
               <div className="creative-os-cards">
                 {variants.map((variant) => {
-                  const concept = data.concepts.find((c) => c.concept_id === variant.concept_id);
-                  const p = latestByVariant[variant.variant_id];
-                  const dec = latestDecision[variant.variant_id];
-                  const decClass = dec?.action === "scale" ? "badge-teal" : dec?.action === "iterate" ? "badge-amber" : "badge-purple";
+                  const concept = conceptsById[variant.concept_id];
+                  const snapshot = latestByVariant[variant.variant_id];
 
                   return (
                     <article className="creative-os-card" key={variant.variant_id}>
                       <div className="creative-os-card-top">
                         <h3>{variant.hook}</h3>
-                        {dec && <span className={`badge ${decClass}`}>{dec.action}</span>}
+                        <span className="badge badge-neutral">{variant.status}</span>
                       </div>
-                      <p className="creative-os-hypothesis">{concept?.name || variant.concept_id} · {variant.stage} · {variant.format} · {variant.version}</p>
-                      <p className="creative-os-hypothesis">Hypotes: {variant.hypothesis}</p>
 
-                      <div className="creative-os-metrics">
-                        <div><span>CTR</span><strong>{pct(p?.ctr)}</strong></div>
-                        <div><span>CPL</span><strong>{money(p?.cpl)}</strong></div>
-                        <div><span>Spend</span><strong>{money(p?.spend)}</strong></div>
+                      <div className="creative-os-meta-grid">
+                        <div>
+                          <span>Angle</span>
+                          <strong>{variant.angle}</strong>
+                        </div>
+                        <div>
+                          <span>Audience</span>
+                          <strong>{concept?.audience || "TBD"}</strong>
+                        </div>
+                        <div>
+                          <span>References</span>
+                          <strong>{concept?.name || variant.concept_id}</strong>
+                          <small>{variant.variant_id}</small>
+                        </div>
                       </div>
+
+                      {showSignals && (
+                        <div className="creative-os-signals">
+                          {formatPct(snapshot?.ctr) && <span>CTR {formatPct(snapshot?.ctr)}</span>}
+                          {formatMoney(snapshot?.cpl) && <span>CPL {formatMoney(snapshot?.cpl)}</span>}
+                          {formatMoney(snapshot?.spend) && <span>Spend {formatMoney(snapshot?.spend)}</span>}
+                          {!snapshot && <span>No live data yet</span>}
+                        </div>
+                      )}
                     </article>
                   );
                 })}
