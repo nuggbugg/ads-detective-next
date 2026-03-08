@@ -1,0 +1,188 @@
+{
+  "objective": "reseller_leads",
+  "baseline": {
+    "ctr": 0.5,
+    "cpl": 37.78
+  },
+  "stages": [
+    "backlog",
+    "briefed",
+    "designed",
+    "ready",
+    "live",
+    "iterating",
+    "scaled",
+    "paused"
+  ],
+  "concepts": [
+    {
+      "concept_id": "c1",
+      "name": "Reseller Demand",
+      "organizing_principle": "desire",
+      "audience": "retail buyers"
+    },
+    {
+      "concept_id": "c2",
+      "name": "Shelf Magnet",
+      "organizing_principle": "desire",
+      "audience": "gym owners"
+    },
+    {
+      "concept_id": "c3",
+      "name": "Fast-Moving SKU",
+      "organizing_principle": "pain",
+      "audience": "ecom supplement stores"
+    },
+    {
+      "concept_id": "c4",
+      "name": "Modern Creatine Format",
+      "organizing_principle": "desire",
+      "audience": "health stores"
+    }
+  ],
+  "variants": [
+    {
+      "variant_id": "v1",
+      "concept_id": "c1",
+      "stage": "problem",
+      "format": "static",
+      "hook": "Sälj en kategori som redan växer",
+      "angle": "category growth",
+      "hypothesis": "Demand framing increases lead intent",
+      "status": "backlog",
+      "version": "v1"
+    },
+    {
+      "variant_id": "v2",
+      "concept_id": "c1",
+      "stage": "product",
+      "format": "static",
+      "hook": "Ta in MOBY i ert sortiment",
+      "angle": "direct reseller CTA",
+      "hypothesis": "Direct CTA improves form starts",
+      "status": "briefed",
+      "version": "v1"
+    },
+    {
+      "variant_id": "v3",
+      "concept_id": "c2",
+      "stage": "solution",
+      "format": "static",
+      "hook": "Mer hyllstopp, mindre förklaring",
+      "angle": "visual sellability",
+      "hypothesis": "Visual merchandising angle lifts CTR",
+      "status": "designed",
+      "version": "v1"
+    },
+    {
+      "variant_id": "v4",
+      "concept_id": "c3",
+      "stage": "product",
+      "format": "static",
+      "hook": "Ett format kunderna faktiskt köper om",
+      "angle": "repeatability",
+      "hypothesis": "Repeat-purchase angle lowers CPL",
+      "status": "ready",
+      "version": "v1"
+    },
+    {
+      "variant_id": "v5",
+      "concept_id": "c4",
+      "stage": "unaware",
+      "format": "static",
+      "hook": "Creatine, men gjort för 2026",
+      "angle": "modern format",
+      "hypothesis": "Novelty hook increases thumbstop",
+      "status": "scaled",
+      "version": "v1"
+    },
+    {
+      "variant_id": "v6",
+      "concept_id": "c4",
+      "stage": "most-aware",
+      "format": "static",
+      "hook": "Ansök som återförsäljare idag",
+      "angle": "urgency CTA",
+      "hypothesis": "Urgency improves lead submit",
+      "status": "iterating",
+      "version": "v2"
+    },
+    {
+      "variant_id": "v7",
+      "concept_id": "c2",
+      "stage": "product",
+      "format": "static",
+      "hook": "Perfekt för gymdisken",
+      "angle": "channel fit",
+      "hypothesis": "Channel-specific copy improves quality leads",
+      "status": "scaled",
+      "version": "v1"
+    },
+    {
+      "variant_id": "v8",
+      "concept_id": "c3",
+      "stage": "problem",
+      "format": "static",
+      "hook": "Tröga kreatin-SKUs? Byt format.",
+      "angle": "replace status quo",
+      "hypothesis": "Pain framing improves qualified leads",
+      "status": "paused",
+      "version": "v1"
+    }
+  ],
+  "performance": [
+    {
+      "snapshot_id": "s_1772981422520_v5",
+      "variant_id": "v5",
+      "spend": 432.2,
+      "ctr": 0.74,
+      "cpl": 34.1,
+      "frequency": 1.5,
+      "thumbstop": 24.3,
+      "taken_at": "2026-03-08T14:50:22.519Z"
+    },
+    {
+      "snapshot_id": "s_1772981422520_v6",
+      "variant_id": "v6",
+      "spend": 288,
+      "ctr": 0.49,
+      "cpl": 42.7,
+      "frequency": 1.7,
+      "thumbstop": 21.2,
+      "taken_at": "2026-03-08T14:50:22.520Z"
+    },
+    {
+      "snapshot_id": "s_1772981422520_v7",
+      "variant_id": "v7",
+      "spend": 1201.4,
+      "ctr": 0.96,
+      "cpl": 29.8,
+      "frequency": 2,
+      "thumbstop": 28.6,
+      "taken_at": "2026-03-08T14:50:22.520Z"
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "d_1772981422520_v5",
+      "variant_id": "v5",
+      "action": "scale",
+      "reason": "CTR/CPL beat baseline",
+      "decided_at": "2026-03-08T14:50:22.520Z"
+    },
+    {
+      "decision_id": "d_1772981422520_v6",
+      "variant_id": "v6",
+      "action": "iterate",
+      "reason": "Good stop, weak click/cost",
+      "decided_at": "2026-03-08T14:50:22.520Z"
+    },
+    {
+      "decision_id": "d_1772981422520_v7",
+      "variant_id": "v7",
+      "action": "scale",
+      "reason": "CTR/CPL beat baseline",
+      "decided_at": "2026-03-08T14:50:22.520Z"
+    }
+  ]
+}

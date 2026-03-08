@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MOBY Creative OS v1</title>
+  <style>
+    body{font-family:Inter,system-ui,sans-serif;background:#1B1A10;color:#fff;margin:0}
+    h1{margin:14px 16px 6px}
+    .top{display:flex;gap:10px;align-items:center;margin:0 16px 12px;flex-wrap:wrap}
+    .pill{background:#2a281c;border:1px solid #4F4A32;border-radius:999px;padding:6px 10px;font-size:12px;color:#F9FDB5}
+    #board{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;padding:12px}
+    .col{background:#2a281c;border:1px solid #4F4A32;border-radius:10px;min-height:280px}
+    .col h3{margin:8px;font-size:13px;color:#F9FDB5}
+    .card{background:#fff;color:#1B1A10;border-radius:8px;padding:8px;margin:8px}
+    .meta{font-size:11px;opacity:.8}
+    .hook{font-weight:700;font-size:13px;margin:6px 0}
+    .kpi{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .k{font-size:11px;background:#eee;border-radius:999px;padding:3px 7px}
+    .scale{background:#d6f5df}.iterate{background:#fff1c2}.pause{background:#ffd8d8}
+  </style>
+</head>
+<body>
+  <h1>MOBY Creative OS v1 — Reseller Leads</h1>
+  <div class="top" id="stats"></div>
+  <div id="board"></div>
+
+<script>
+const fmt=(n,d=2)=> (n===undefined||n===null)?'-':Number(n).toFixed(d);
+fetch('data.json').then(r=>r.json()).then(d=>{
+  const latestByVariant = {};
+  (d.performance||[]).forEach(p=>{ if(!latestByVariant[p.variant_id] || latestByVariant[p.variant_id].taken_at < p.taken_at) latestByVariant[p.variant_id]=p;});
+  const latestDecision = {};
+  (d.decisions||[]).forEach(x=>{ if(!latestDecision[x.variant_id] || latestDecision[x.variant_id].decided_at < x.decided_at) latestDecision[x.variant_id]=x;});
+
+  const scaled=d.variants.filter(v=>v.status==='scaled').length;
+  const iter=d.variants.filter(v=>v.status==='iterating').length;
+  const paused=d.variants.filter(v=>v.status==='paused').length;
+  document.getElementById('stats').innerHTML = [
+    `Baseline CTR: ${d.baseline?.ctr}%`,
+    `Baseline CPL: ${d.baseline?.cpl} SEK`,
+    `Scaled: ${scaled}`,
+    `Iterating: ${iter}`,
+    `Paused: ${paused}`
+  ].map(x=>`<span class='pill'>${x}</span>`).join('');
+
+  const board=document.getElementById('board');
+  d.stages.forEach(s=>{
+    const c=document.createElement('div');
+    c.className='col';
+    c.innerHTML=`<h3>${s}</h3>`;
+
+    d.variants.filter(v=>v.status===s).forEach(v=>{
+      const concept=d.concepts.find(x=>x.concept_id===v.concept_id);
+      const p=latestByVariant[v.variant_id];
+      const dec=latestDecision[v.variant_id];
+      const decClass = dec?.action==='scale'?'scale':(dec?.action==='iterate'?'iterate':'pause');
+
+      const card=document.createElement('div');
+      card.className='card';
+      card.innerHTML=`
+        <div class='meta'>${v.variant_id} · ${concept?.name||v.concept_id}</div>
+        <div class='hook'>${v.hook}</div>
+        <div class='meta'>${v.stage} · ${v.format} · ${v.version}</div>
+        <div class='meta'>Hypotes: ${v.hypothesis}</div>
+        <div class='kpi'>
+          <span class='k'>CTR ${fmt(p?.ctr,2)}%</span>
+          <span class='k'>CPL ${fmt(p?.cpl,2)} kr</span>
+          <span class='k'>Spend ${fmt(p?.spend,0)} kr</span>
+          <span class='k'>Freq ${fmt(p?.frequency,1)}</span>
+        </div>
+        ${dec?`<div class='kpi'><span class='k ${decClass}'>${dec.action.toUpperCase()}</span><span class='meta'>${dec.reason}</span></div>`:''}
+      `;
+      c.appendChild(card);
+    });
+
+    board.appendChild(c);
+  });
+});
+</script>
+</body>
+</html>
