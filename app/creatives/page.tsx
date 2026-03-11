@@ -171,7 +171,7 @@ export default function CreativesPage() {
             onChange={(e) => updateFilter("campaign_objective", e.target.value)}
           >
             <option value="">All objectives</option>
-            {filterOptions.campaign_objectives.map((o) => (
+            {(filterOptions.campaign_objectives ?? []).map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
