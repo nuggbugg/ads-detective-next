@@ -19,6 +19,7 @@ export default function CreativesPage() {
     asset_type?: string;
     messaging_angle?: string;
     delivery?: string;
+    campaign_objective?: string;
   }>({ delivery: "had_delivery" });
 
   const creatives = useQuery(api.creatives.list, filters);
@@ -166,6 +167,16 @@ export default function CreativesPage() {
           </select>
           <select
             className="input input-sm"
+            value={filters.campaign_objective || ""}
+            onChange={(e) => updateFilter("campaign_objective", e.target.value)}
+          >
+            <option value="">All objectives</option>
+            {filterOptions.campaign_objectives.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+          <select
+            className="input input-sm"
             value={filters.ad_type || ""}
             onChange={(e) => updateFilter("ad_type", e.target.value)}
           >
@@ -235,6 +246,7 @@ export default function CreativesPage() {
                 <th><Tip label="Type" /></th>
                 <SortTh col="spend"><Tip label="Spend" /></SortTh>
                 <SortTh col={primaryMetricKey}><Tip label={goal === "lead_gen" ? "CPA" : goal === "traffic" ? "CTR" : "ROAS"} /></SortTh>
+                <SortTh col="purchases"><Tip label="Purchases" /></SortTh>
                 <SortTh col="ctr"><Tip label="CTR" /></SortTh>
                 <SortTh col="impressions"><Tip label="Impressions" /></SortTh>
                 <th><Tip label="Stage" /></th>
@@ -246,7 +258,7 @@ export default function CreativesPage() {
               {groups.map((group, gi) => (<React.Fragment key={`g-${gi}`}>
               {group.label && (
                 <tr className="table-group-row">
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <strong>{group.label}</strong>
                     <span className="table-group-count">{group.items.length}</span>
                   </td>
@@ -279,6 +291,7 @@ export default function CreativesPage() {
                       ? (c.ctr ?? 0).toFixed(2) + "%"
                       : (c.roas ?? 0).toFixed(2) + "x"}
                   </td>
+                  <td>{c.purchases || 0}</td>
                   <td>{(c.ctr ?? 0).toFixed(2)}%</td>
                   <td>{c.impressions.toLocaleString()}</td>
                   <td>{c.funnel_stage || "—"}</td>
@@ -379,6 +392,10 @@ export default function CreativesPage() {
                     <span className="cc2-metric-value">{(c.roas ?? 0).toFixed(2)}x</span>
                   </div>
                   <div className="cc2-metric-row">
+                    <span className="cc2-metric-label">Purchases</span>
+                    <span className="cc2-metric-value">{c.purchases || 0}</span>
+                  </div>
+                  <div className="cc2-metric-row">
                     <span className="cc2-metric-label">
                       <span className="cc2-dot" style={{ background: cpaColor }} />
                       CPA
@@ -474,42 +491,59 @@ export default function CreativesPage() {
                 </div>
 
                 <h4 className="creative-modal-section-title">Performance</h4>
-                <div className="creative-modal-metrics">
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">{fmt(selectedCreative.spend)}</span>
-                    <span className="cmm-label"><Tip label="Spend" /></span>
+                {(() => {
+                  // Determine the ad's actual objective to show relevant metrics
+                  const obj = (selectedCreative.campaign_objective || "").toUpperCase();
+                  const isLeadCampaign = obj.includes("LEAD");
+                  const isSalesCampaign = obj.includes("SALE") || obj.includes("CONVERSIONS") || obj.includes("PURCHASE");
+                  const isTrafficCampaign = obj.includes("TRAFFIC") || obj.includes("LINK_CLICKS");
+
+                  // The primary conversion metric adapts to the campaign objective
+                  const conversionLabel = isLeadCampaign ? "Leads" : "Purchases";
+                  const conversionValue = isLeadCampaign
+                    ? (selectedCreative.leads || 0)
+                    : (selectedCreative.purchases || 0);
+                  const cpaLabel = isLeadCampaign ? "Cost/Lead" : "CPA";
+
+                  return (
+                  <div className="creative-modal-metrics">
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">{fmt(selectedCreative.spend)}</span>
+                      <span className="cmm-label"><Tip label="Spend" /></span>
+                    </div>
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">{conversionValue}</span>
+                      <span className="cmm-label"><Tip label={conversionLabel} /></span>
+                    </div>
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">
+                        {selectedCreative.cpa > 0 ? fmt(selectedCreative.cpa) : "—"}
+                      </span>
+                      <span className="cmm-label"><Tip label={cpaLabel} /></span>
+                    </div>
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">{(selectedCreative.roas ?? 0).toFixed(2)}x</span>
+                      <span className="cmm-label"><Tip label="ROAS" /></span>
+                    </div>
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">{(selectedCreative.ctr ?? 0).toFixed(2)}%</span>
+                      <span className="cmm-label"><Tip label="CTR" /></span>
+                    </div>
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">{selectedCreative.impressions.toLocaleString()}</span>
+                      <span className="cmm-label"><Tip label="Impressions" /></span>
+                    </div>
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">{selectedCreative.clicks.toLocaleString()}</span>
+                      <span className="cmm-label"><Tip label="Clicks" /></span>
+                    </div>
+                    <div className="creative-modal-metric">
+                      <span className="cmm-value">{fmt(selectedCreative.cpc)}</span>
+                      <span className="cmm-label"><Tip label="CPC" /></span>
+                    </div>
                   </div>
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">
-                      {selectedCreative.cpa > 0 ? fmt(selectedCreative.cpa) : "—"}
-                    </span>
-                    <span className="cmm-label"><Tip label={goal === "lead_gen" ? "Cost/Lead" : "CPA"} /></span>
-                  </div>
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">{selectedCreative.leads || selectedCreative.conversions || 0}</span>
-                    <span className="cmm-label"><Tip label="Leads" /></span>
-                  </div>
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">{(selectedCreative.ctr ?? 0).toFixed(2)}%</span>
-                    <span className="cmm-label"><Tip label="CTR" /></span>
-                  </div>
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">{selectedCreative.impressions.toLocaleString()}</span>
-                    <span className="cmm-label"><Tip label="Impressions" /></span>
-                  </div>
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">{selectedCreative.clicks.toLocaleString()}</span>
-                    <span className="cmm-label"><Tip label="Clicks" /></span>
-                  </div>
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">{fmt(selectedCreative.cpc)}</span>
-                    <span className="cmm-label"><Tip label="CPC" /></span>
-                  </div>
-                  <div className="creative-modal-metric">
-                    <span className="cmm-value">{(selectedCreative.roas ?? 0).toFixed(2)}x</span>
-                    <span className="cmm-label"><Tip label="ROAS" /></span>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 <h4 className="creative-modal-section-title">AI Analysis</h4>
                 <div className="creative-modal-tags">

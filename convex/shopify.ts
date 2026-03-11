@@ -136,7 +136,7 @@ export const fetchMonthlySales = action({
     // Fetch orders for current month, paginating through all
     const baseUrl =
       `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/orders.json` +
-      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250&fields=id,tags,line_items`;
+      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250&fields=id,tags,customer,line_items`;
 
     let totalQuantity = 0;
     let b2bQuantity = 0;
@@ -156,6 +156,7 @@ export const fetchMonthlySales = action({
       const data = (await res.json()) as {
         orders: Array<{
           tags: string;
+          customer?: { tags?: string };
           line_items: Array<{ quantity: number }>;
         }>;
       };
@@ -164,9 +165,11 @@ export const fetchMonthlySales = action({
         const orderQty = order.line_items.reduce((s, item) => s + item.quantity, 0);
         totalQuantity += orderQty;
 
-        // Check if order has a B2B tag (case-insensitive)
-        const tags = (order.tags || "").split(",").map((t) => t.trim().toLowerCase());
-        if (tags.includes("b2b")) {
+        // Check if order OR customer has a B2B tag (case-insensitive)
+        const orderTags = (order.tags || "").split(",").map((t) => t.trim().toLowerCase());
+        const customerTags = (order.customer?.tags || "").split(",").map((t) => t.trim().toLowerCase());
+        const isB2B = orderTags.includes("b2b") || customerTags.includes("b2b");
+        if (isB2B) {
           b2bQuantity += orderQty;
         } else {
           onlineQuantity += orderQty;

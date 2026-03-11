@@ -11,6 +11,7 @@ export const list = query({
     asset_type: v.optional(v.string()),
     messaging_angle: v.optional(v.string()),
     delivery: v.optional(v.string()),
+    campaign_objective: v.optional(v.string()),
   },
   handler: async (ctx, filters) => {
     const userId = await getAuthUserId(ctx);
@@ -45,6 +46,9 @@ export const list = query({
     }
     if (filters.messaging_angle) {
       creatives = creatives.filter((c) => c.messaging_angle === filters.messaging_angle);
+    }
+    if (filters.campaign_objective) {
+      creatives = creatives.filter((c) => c.campaign_objective === filters.campaign_objective);
     }
 
     // Sort by spend descending
@@ -83,6 +87,7 @@ export const getFilterOptions = query({
       funnel_stages: unique("funnel_stage"),
       ad_statuses: unique("ad_status"),
       account_ids: unique("account_id"),
+      campaign_objectives: unique("campaign_objective"),
     };
   },
 });
