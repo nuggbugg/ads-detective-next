@@ -42,7 +42,12 @@ export const get = query({
       filtered_active: goalCreatives.filter((c) => c.ad_status === "ACTIVE").length,
       with_delivery: withDelivery.length,
       total_spend: goalCreatives.reduce((s, c) => s + c.spend, 0),
-      avg_roas: withDelivery.length > 0 ? withDelivery.reduce((s, c) => s + c.roas, 0) / withDelivery.length : 0,
+      total_purchase_value: goalCreatives.reduce((s, c) => s + c.purchase_value, 0),
+      avg_roas: (() => {
+        const totalSpend = goalCreatives.reduce((s, c) => s + c.spend, 0);
+        const totalPV = goalCreatives.reduce((s, c) => s + c.purchase_value, 0);
+        return totalSpend > 0 ? totalPV / totalSpend : 0;
+      })(),
       avg_ctr: withDelivery.length > 0 ? withDelivery.reduce((s, c) => s + c.ctr, 0) / withDelivery.length : 0,
       avg_cpa: withConversions.length > 0 ? withConversions.reduce((s, c) => s + c.cpa, 0) / withConversions.length : 0,
       total_impressions: goalCreatives.reduce((s, c) => s + c.impressions, 0),

@@ -315,6 +315,44 @@ export default function CreativesPage() {
               ))}
               </React.Fragment>))}
             </tbody>
+            {(() => {
+              const totalSpend = sortedCreatives.reduce((s, c) => s + c.spend, 0);
+              const totalPurchases = sortedCreatives.reduce((s, c) => s + (c.purchases || 0), 0);
+              const totalImpressions = sortedCreatives.reduce((s, c) => s + c.impressions, 0);
+              const totalClicks = sortedCreatives.reduce((s, c) => s + c.clicks, 0);
+              const totalPV = sortedCreatives.reduce((s, c) => s + c.purchase_value, 0);
+              const avgCtr = sortedCreatives.length > 0
+                ? sortedCreatives.reduce((s, c) => s + (c.ctr ?? 0), 0) / sortedCreatives.length
+                : 0;
+              const blendedRoas = totalSpend > 0 ? totalPV / totalSpend : 0;
+              const avgCpa = (() => {
+                const withConv = sortedCreatives.filter(c => c.conversions > 0);
+                return withConv.length > 0
+                  ? withConv.reduce((s, c) => s + c.cpa, 0) / withConv.length
+                  : 0;
+              })();
+              const primaryTotal = goal === "lead_gen"
+                ? (avgCpa > 0 ? fmt(avgCpa) : "—")
+                : goal === "traffic"
+                ? avgCtr.toFixed(2) + "%"
+                : blendedRoas.toFixed(2) + "x";
+              return (
+                <tfoot>
+                  <tr className="table-totals-row">
+                    <td>Total / Avg ({sortedCreatives.length})</td>
+                    <td></td>
+                    <td>{fmt(totalSpend)}</td>
+                    <td>{primaryTotal}</td>
+                    <td>{totalPurchases}</td>
+                    <td>{avgCtr.toFixed(2)}%</td>
+                    <td>{totalImpressions.toLocaleString()}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              );
+            })()}
           </table>
         </div>
         );
