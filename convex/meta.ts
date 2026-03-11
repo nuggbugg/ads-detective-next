@@ -162,6 +162,96 @@ export async function fetchFullResImageBlobs(
   return adIdToBlob;
 }
 
+/**
+ * Fetch high-quality video thumbnail blobs for video ads.
+ * Uses the Meta /advideos endpoint to get video thumbnails at full resolution.
+ * Returns a map of adId → Blob for storage.
+ */
+export async function fetchVideoThumbnailBlobs(
+  token: string,
+  accountId: string,
+  ads: Array<Record<string, unknown>>
+) {
+  const adIdToBlob = new Map<string, Blob>();
+
+  // Collect video_ids from ads that have them
+  const videoAds: Array<{ adId: string; videoId: string }> = [];
+  for (const ad of ads) {
+    const creative = ad.creative as Record<string, unknown> | undefined;
+    if (!creative?.video_id) continue;
+    // Skip ads that already have an image_hash (these have full-res images)
+    if (creative.image_hash) continue;
+    videoAds.push({
+      adId: ad.id as string,
+      videoId: creative.video_id as string,
+    });
+  }
+
+  if (videoAds.length === 0) return adIdToBlob;
+
+  // Fetch video thumbnails — batch by getting each video's picture
+  for (const { adId, videoId } of videoAds) {
+    try {
+      // Get the video thumbnail URL at high resolution
+      const data = await metaRequest(
+        `${API_BASE}/${videoId}?fields=thumbnails{uri,width,height}`,
+        token
+      );
+
+      // Pick the largest thumbnail
+      let bestThumb: { uri: string; width: number; height: number } | null = null;
+      const thumbnails = data.thumbnails?.data;
+      if (Array.isArray(thumbnails)) {
+        for (const t of thumbnails) {
+          if (!bestThumb || (t.width * t.height) > (bestThumb.width * bestThumb.height)) {
+            bestThumb = t;
+          }
+        }
+      }
+
+      // Fallback: try the picture field directly
+      if (!bestThumb) {
+        const fallback = await metaRequest(
+          `${API_BASE}/${videoId}?fields=picture`,
+          token
+        );
+        if (fallback.picture) {
+          // This is a URL, fetch the blob
+          const res = await fetch(fallback.picture, {
+            headers: { "User-Agent": "Mozilla/5.0" },
+            redirect: "follow",
+          });
+          if (res.ok) {
+            const blob = await res.blob();
+            if (blob.size > 1024) {
+              adIdToBlob.set(adId, blob);
+            }
+          }
+          continue;
+        }
+      }
+
+      if (bestThumb?.uri) {
+        const res = await fetch(bestThumb.uri, {
+          headers: { "User-Agent": "Mozilla/5.0" },
+          redirect: "follow",
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          if (blob.size > 1024) {
+            adIdToBlob.set(adId, blob);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to fetch video thumbnail for video ${videoId}:`, err);
+      // Non-fatal: skip this video
+    }
+  }
+
+  return adIdToBlob;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function normalizeInsight(insight: Record<string, any>, adsMap: Map<string, any>) {
   const adId = insight.ad_id;

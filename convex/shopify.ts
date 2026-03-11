@@ -10,6 +10,10 @@ const SHOPIFY_API_VERSION = "2026-01";
 const SHOPIFY_SCOPES = "read_orders,read_products";
 const SALES_GOAL = 500;
 
+// Manual B2B adjustments (orders outside Shopify)
+const MANUAL_B2B_BOXES = 12;
+const MANUAL_B2B_REVENUE = 2016; // kr inc taxes
+
 // --- OAuth Flow ---
 
 /** Returns the Shopify authorize URL for the frontend to redirect to */
@@ -134,13 +138,16 @@ export const fetchMonthlySales = action({
     });
 
     // Fetch orders for current month, paginating through all
+    // NOTE: Do NOT use &fields= filter — it strips nested objects like customer.tags
     const baseUrl =
       `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/orders.json` +
-      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250&fields=id,tags,customer,line_items`;
+      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250`;
 
     let totalQuantity = 0;
     let b2bQuantity = 0;
     let onlineQuantity = 0;
+    let b2bRevenue = 0;
+    let onlineRevenue = 0;
     let nextUrl: string | null = baseUrl;
 
     while (nextUrl) {
@@ -155,7 +162,9 @@ export const fetchMonthlySales = action({
 
       const data = (await res.json()) as {
         orders: Array<{
+          id: number;
           tags: string;
+          total_price: string;
           customer?: { tags?: string };
           line_items: Array<{ quantity: number }>;
         }>;
@@ -163,16 +172,25 @@ export const fetchMonthlySales = action({
 
       for (const order of data.orders) {
         const orderQty = order.line_items.reduce((s, item) => s + item.quantity, 0);
+        const orderRevenue = parseFloat(order.total_price || "0");
         totalQuantity += orderQty;
 
         // Check if order OR customer has a B2B tag (case-insensitive)
         const orderTags = (order.tags || "").split(",").map((t) => t.trim().toLowerCase());
         const customerTags = (order.customer?.tags || "").split(",").map((t) => t.trim().toLowerCase());
         const isB2B = orderTags.includes("b2b") || customerTags.includes("b2b");
+
+        // Debug: log tags for first few orders to verify data
+        if (data.orders.indexOf(order) < 5) {
+          console.log(`Order ${order.id}: orderTags=[${orderTags}] customerTags=[${customerTags}] isB2B=${isB2B} revenue=${orderRevenue}`);
+        }
+
         if (isB2B) {
           b2bQuantity += orderQty;
+          b2bRevenue += orderRevenue;
         } else {
           onlineQuantity += orderQty;
+          onlineRevenue += orderRevenue;
         }
       }
 
@@ -187,11 +205,21 @@ export const fetchMonthlySales = action({
       }
     }
 
+    // Add manual B2B adjustments (orders outside Shopify)
+    totalQuantity += MANUAL_B2B_BOXES;
+    b2bQuantity += MANUAL_B2B_BOXES;
+    b2bRevenue += MANUAL_B2B_REVENUE;
+
+    const totalRevenue = onlineRevenue + b2bRevenue;
+
     // Cache the result in settings
     const cacheData = JSON.stringify({
       sold: totalQuantity,
       b2b: b2bQuantity,
       online: onlineQuantity,
+      b2b_revenue: Math.round(b2bRevenue),
+      online_revenue: Math.round(onlineRevenue),
+      total_revenue: Math.round(totalRevenue),
       goal: SALES_GOAL,
       month: monthName,
       last_fetched: new Date().toISOString(),
@@ -199,7 +227,7 @@ export const fetchMonthlySales = action({
 
     await ctx.runMutation(internal.shopify._cacheSales, { data: cacheData });
 
-    return { sold: totalQuantity, b2b: b2bQuantity, online: onlineQuantity, goal: SALES_GOAL, month: monthName };
+    return { sold: totalQuantity, b2b: b2bQuantity, online: onlineQuantity, b2b_revenue: Math.round(b2bRevenue), online_revenue: Math.round(onlineRevenue), total_revenue: Math.round(totalRevenue), goal: SALES_GOAL, month: monthName };
   },
 });
 
@@ -236,6 +264,9 @@ export const getSalesGoal = query({
         sold: number;
         b2b: number;
         online: number;
+        b2b_revenue: number;
+        online_revenue: number;
+        total_revenue: number;
         goal: number;
         month: string;
         last_fetched: string;

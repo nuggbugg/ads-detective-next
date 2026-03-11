@@ -16,25 +16,40 @@ export const get = query({
       .first();
     const goal = goalSetting?.value || "roas";
 
-    // Aggregate metrics
-    const withDelivery = allCreatives.filter((c) => c.spend > 0);
+    // Filter creatives by campaign objective based on goal setting
+    // Map goal → Meta objective substring
+    const objectiveFilter =
+      goal === "lead_gen" ? "LEAD"
+      : goal === "traffic" ? "TRAFFIC"
+      : "SALES"; // "roas" → OUTCOME_SALES
+
+    const goalCreatives = allCreatives.filter((c) =>
+      (c.campaign_objective || "").toUpperCase().includes(objectiveFilter)
+    );
+
+    // Aggregate metrics — filtered by goal objective
+    const withDelivery = goalCreatives.filter((c) => c.spend > 0);
     const withConversions = withDelivery.filter((c) => c.conversions > 0);
 
     const metrics = {
+      // Summary bar counts are unfiltered (all creatives)
       total_creatives: allCreatives.length,
-      with_delivery: withDelivery.length,
       active_ads: allCreatives.filter((c) => c.ad_status === "ACTIVE").length,
-      total_spend: allCreatives.reduce((s, c) => s + c.spend, 0),
+      analyzed_count: allCreatives.filter((c) => c.analysis_status === "completed").length,
+      pending_count: allCreatives.filter((c) => c.analysis_status === "pending").length,
+      // Performance metrics are filtered by goal objective
+      filtered_creatives: goalCreatives.length,
+      filtered_active: goalCreatives.filter((c) => c.ad_status === "ACTIVE").length,
+      with_delivery: withDelivery.length,
+      total_spend: goalCreatives.reduce((s, c) => s + c.spend, 0),
       avg_roas: withDelivery.length > 0 ? withDelivery.reduce((s, c) => s + c.roas, 0) / withDelivery.length : 0,
       avg_ctr: withDelivery.length > 0 ? withDelivery.reduce((s, c) => s + c.ctr, 0) / withDelivery.length : 0,
       avg_cpa: withConversions.length > 0 ? withConversions.reduce((s, c) => s + c.cpa, 0) / withConversions.length : 0,
-      total_impressions: allCreatives.reduce((s, c) => s + c.impressions, 0),
-      total_clicks: allCreatives.reduce((s, c) => s + c.clicks, 0),
-      total_purchases: allCreatives.reduce((s, c) => s + c.purchases, 0),
-      total_leads: allCreatives.reduce((s, c) => s + c.leads, 0),
-      total_conversions: allCreatives.reduce((s, c) => s + c.conversions, 0),
-      analyzed_count: allCreatives.filter((c) => c.analysis_status === "completed").length,
-      pending_count: allCreatives.filter((c) => c.analysis_status === "pending").length,
+      total_impressions: goalCreatives.reduce((s, c) => s + c.impressions, 0),
+      total_clicks: goalCreatives.reduce((s, c) => s + c.clicks, 0),
+      total_purchases: goalCreatives.reduce((s, c) => s + c.purchases, 0),
+      total_leads: goalCreatives.reduce((s, c) => s + c.leads, 0),
+      total_conversions: goalCreatives.reduce((s, c) => s + c.conversions, 0),
     };
 
     // Read spend threshold from settings
@@ -44,8 +59,8 @@ export const get = query({
       .first();
     const spendThreshold = parseFloat(spendSetting?.value ?? "") || 50;
 
-    // Top performers — goal-aware
-    const qualified = allCreatives.filter((c) => c.spend > spendThreshold);
+    // Top performers — filtered by goal objective
+    const qualified = goalCreatives.filter((c) => c.spend > spendThreshold);
     let topPerformers;
     if (goal === "lead_gen") {
       topPerformers = qualified
@@ -95,7 +110,7 @@ export const get = query({
       .query("settings")
       .withIndex("by_key", (q) => q.eq("key", "shopify_access_token"))
       .first();
-    let salesGoal: { sold: number; b2b: number; online: number; goal: number; month: string; last_fetched: string } | null = null;
+    let salesGoal: { sold: number; b2b: number; online: number; b2b_revenue: number; online_revenue: number; total_revenue: number; goal: number; month: string; last_fetched: string } | null = null;
     if (shopifyToken?.value) {
       const cached = await ctx.db
         .query("settings")

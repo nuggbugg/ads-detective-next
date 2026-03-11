@@ -86,6 +86,15 @@ export default function DashboardPage() {
           sub: `${m.total_purchases.toLocaleString()} purchases`,
         };
 
+  // CAC (Customer Acquisition Cost) = Total Spend / Conversions
+  const cacConversions = goal === "lead_gen"
+    ? (m.total_leads || m.total_conversions || 0)
+    : goal === "traffic"
+    ? m.total_clicks
+    : m.total_purchases;
+  const cacValue = cacConversions > 0 ? m.total_spend / cacConversions : 0;
+  const cacLabel = goal === "lead_gen" ? "CAC (per lead)" : goal === "traffic" ? "CPC" : "CAC";
+
   return (
     <div className="page-content-flush">
       <div className="dash">
@@ -119,59 +128,131 @@ export default function DashboardPage() {
         </div>
 
         {/* Sales Goal Progress */}
-        {data.has_shopify && data.sales_goal && (
-          <div className="goal-progress">
-            <div className="goal-progress-header">
-              <div className="goal-progress-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
-                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
-                </svg>
-                <span>Monthly Sales Goal</span>
-                <span className="goal-progress-month">{data.sales_goal.month}</span>
+        {data.has_shopify && data.sales_goal && (() => {
+          const sg = data.sales_goal;
+          const hasRevData = (sg.total_revenue || 0) > 0;
+          const totalRev = sg.total_revenue || 0;
+          const onlineRev = sg.online_revenue || 0;
+          const b2bRev = sg.b2b_revenue || 0;
+          // Use revenue if available, otherwise fall back to box counts
+          const onlinePct = hasRevData
+            ? totalRev > 0 ? (onlineRev / totalRev) * 100 : 100
+            : sg.sold > 0 ? ((sg.online ?? sg.sold) / sg.sold) * 100 : 100;
+          const b2bPct = hasRevData
+            ? totalRev > 0 ? (b2bRev / totalRev) * 100 : 0
+            : sg.sold > 0 ? ((sg.b2b ?? 0) / sg.sold) * 100 : 0;
+          // SVG donut chart params
+          const R = 40;
+          const C = 2 * Math.PI * R;
+          const onlineArc = (onlinePct / 100) * C;
+          const b2bArc = (b2bPct / 100) * C;
+          const fmtKr = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k kr` : `${n} kr`;
+
+          return (
+            <div className="goal-progress">
+              <div className="goal-progress-header">
+                <div className="goal-progress-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                  <span>Monthly Sales Goal</span>
+                  <span className="goal-progress-month">{sg.month}</span>
+                </div>
+                <button
+                  className="goal-progress-refresh"
+                  onClick={handleRefreshSales}
+                  disabled={refreshing}
+                  title="Refresh from Shopify"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" className={refreshing ? "spin" : ""}>
+                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+                  </svg>
+                </button>
               </div>
-              <button
-                className="goal-progress-refresh"
-                onClick={handleRefreshSales}
-                disabled={refreshing}
-                title="Refresh from Shopify"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" className={refreshing ? "spin" : ""}>
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
-                </svg>
-              </button>
-            </div>
-            <div className="goal-progress-bar-container">
-              <div className="goal-progress-bar-track">
-                <div
-                  className="goal-progress-bar-fill goal-bar-online"
-                  style={{ width: `${Math.min(((data.sales_goal.online ?? data.sales_goal.sold) / data.sales_goal.goal) * 100, 100)}%` }}
-                />
-                <div
-                  className="goal-progress-bar-fill goal-bar-b2b"
-                  style={{ width: `${Math.min(((data.sales_goal.b2b ?? 0) / data.sales_goal.goal) * 100, 100)}%` }}
-                />
+              <div className="goal-progress-row">
+                <div className="goal-progress-bar-section">
+                  <div className="goal-progress-bar-container">
+                    <div className="goal-progress-bar-track">
+                      <div
+                        className="goal-progress-bar-fill goal-bar-online"
+                        style={{ width: `${Math.min(((sg.online ?? sg.sold) / sg.goal) * 100, 100)}%` }}
+                      />
+                      <div
+                        className="goal-progress-bar-fill goal-bar-b2b"
+                        style={{ width: `${Math.min(((sg.b2b ?? 0) / sg.goal) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="goal-progress-stats">
+                    <span className="goal-progress-count">
+                      <strong>{sg.sold}</strong> / {sg.goal} boxes
+                    </span>
+                    <span className="goal-progress-pct">
+                      {Math.round((sg.sold / sg.goal) * 100)}%
+                    </span>
+                  </div>
+                  <div className="goal-progress-legend">
+                    <span className="goal-legend-item">
+                      <span className="goal-legend-dot goal-legend-online" />
+                      Online <strong>{sg.online ?? sg.sold}</strong>
+                    </span>
+                    <span className="goal-legend-item">
+                      <span className="goal-legend-dot goal-legend-b2b" />
+                      B2B <strong>{sg.b2b ?? 0}</strong>
+                    </span>
+                  </div>
+                </div>
+                {sg.sold > 0 && (
+                  <div className="goal-revenue-donut">
+                    <svg viewBox="0 0 100 100" className="donut-chart">
+                      {/* Online arc */}
+                      <circle
+                        cx="50" cy="50" r={R}
+                        fill="none"
+                        stroke="var(--accent)"
+                        strokeWidth="12"
+                        strokeDasharray={`${onlineArc} ${C - onlineArc}`}
+                        strokeDashoffset={C * 0.25}
+                        strokeLinecap="round"
+                      />
+                      {/* B2B arc */}
+                      {b2bPct > 0 && (
+                        <circle
+                          cx="50" cy="50" r={R}
+                          fill="none"
+                          stroke="#6c8cff"
+                          strokeWidth="12"
+                          strokeDasharray={`${b2bArc} ${C - b2bArc}`}
+                          strokeDashoffset={C * 0.25 - onlineArc}
+                          strokeLinecap="round"
+                        />
+                      )}
+                      {/* Center text */}
+                      <text x="50" y="46" textAnchor="middle" className="donut-total-label">
+                        {hasRevData ? "Revenue" : "Boxes"}
+                      </text>
+                      <text x="50" y="58" textAnchor="middle" className="donut-total-value">
+                        {hasRevData ? fmtKr(totalRev) : sg.sold}
+                      </text>
+                    </svg>
+                    <div className="donut-legend">
+                      <span className="donut-legend-item">
+                        <span className="goal-legend-dot goal-legend-online" />
+                        {hasRevData ? fmtKr(onlineRev) : `${sg.online ?? sg.sold} boxes`}{" "}
+                        <span className="donut-legend-pct">({Math.round(onlinePct)}%)</span>
+                      </span>
+                      <span className="donut-legend-item">
+                        <span className="goal-legend-dot goal-legend-b2b" />
+                        {hasRevData ? fmtKr(b2bRev) : `${sg.b2b ?? 0} boxes`}{" "}
+                        <span className="donut-legend-pct">({Math.round(b2bPct)}%)</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="goal-progress-stats">
-              <span className="goal-progress-count">
-                <strong>{data.sales_goal.sold}</strong> / {data.sales_goal.goal} boxes
-              </span>
-              <span className="goal-progress-pct">
-                {Math.round((data.sales_goal.sold / data.sales_goal.goal) * 100)}%
-              </span>
-            </div>
-            <div className="goal-progress-legend">
-              <span className="goal-legend-item">
-                <span className="goal-legend-dot goal-legend-online" />
-                Online <strong>{data.sales_goal.online ?? data.sales_goal.sold}</strong>
-              </span>
-              <span className="goal-legend-item">
-                <span className="goal-legend-dot goal-legend-b2b" />
-                B2B <strong>{data.sales_goal.b2b ?? 0}</strong>
-              </span>
-            </div>
-          </div>
-        )}
+          );
+        })()}
         {data.has_shopify && !data.sales_goal && (
           <div className="goal-progress goal-progress-empty">
             <span>{refreshing ? "Loading sales data..." : "Shopify connected — waiting for data"}</span>
@@ -231,23 +312,17 @@ export default function DashboardPage() {
                 </div>
                 <div className="dash-metric-card">
                   <div className="dash-metric-top">
-                    <span className="dash-metric-label">
-                      <Tip label={goal === "traffic" ? "Avg CPC" : "Avg CTR"} />
-                    </span>
+                    <span className="dash-metric-label"><Tip label={cacLabel} /></span>
                   </div>
-                  <div className="dash-metric-value">
-                    {goal === "traffic"
-                      ? fmt(m.total_clicks > 0 ? m.total_spend / m.total_clicks : 0)
-                      : m.avg_ctr.toFixed(2) + "%"}
-                  </div>
-                  <div className="dash-metric-sub"><Tip label="Clicks">{m.total_clicks.toLocaleString()} clicks</Tip></div>
+                  <div className="dash-metric-value">{fmt(cacValue)}</div>
+                  <div className="dash-metric-sub"><Tip label="Avg CTR">{m.avg_ctr.toFixed(2)}% CTR</Tip></div>
                 </div>
                 <div className="dash-metric-card">
                   <div className="dash-metric-top">
                     <span className="dash-metric-label"><Tip label="Creatives" /></span>
                   </div>
-                  <div className="dash-metric-value">{m.total_creatives}</div>
-                  <div className="dash-metric-sub"><Tip label="Active Ads">{m.active_ads} active ads</Tip></div>
+                  <div className="dash-metric-value">{m.filtered_creatives}</div>
+                  <div className="dash-metric-sub"><Tip label="Active Ads">{m.filtered_active} active</Tip></div>
                 </div>
               </div>
 

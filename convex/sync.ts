@@ -6,6 +6,7 @@ import {
   fetchAdsWithInsights,
   fetchAds,
   fetchFullResImageBlobs,
+  fetchVideoThumbnailBlobs,
   normalizeInsight,
 } from "./meta";
 
@@ -104,24 +105,47 @@ export const _syncAccountImpl = internalAction({
     }
 
     // Download full-res images and store in Convex
+    const adsArr = ads as Array<Record<string, unknown>>;
+    const storedAdIds = new Set<string>();
     try {
       const imageBlobs = await fetchFullResImageBlobs(
         token,
         account.meta_account_id,
-        ads as Array<Record<string, unknown>>
+        adsArr
       );
 
       for (const [adId, blob] of imageBlobs) {
         const storageId = await ctx.storage.store(blob);
-        // Use upsert to patch with image_storage_id
+        await ctx.runMutation(internal.creatives.upsert, {
+          ad_id: adId,
+          data: { image_storage_id: storageId },
+        });
+        storedAdIds.add(adId);
+      }
+    } catch (err) {
+      console.error("Image download failed:", err);
+    }
+
+    // Download high-quality video thumbnails for video ads that don't have stored images
+    try {
+      const videoBlobs = await fetchVideoThumbnailBlobs(
+        token,
+        account.meta_account_id,
+        adsArr.filter(ad => !storedAdIds.has(ad.id as string))
+      );
+
+      for (const [adId, blob] of videoBlobs) {
+        const storageId = await ctx.storage.store(blob);
         await ctx.runMutation(internal.creatives.upsert, {
           ad_id: adId,
           data: { image_storage_id: storageId },
         });
       }
+      if (videoBlobs.size > 0) {
+        console.log(`[sync] Stored ${videoBlobs.size} video thumbnails`);
+      }
     } catch (err) {
-      console.error("Image download failed:", err);
-      // Non-fatal: sync still succeeds without images
+      console.error("Video thumbnail download failed:", err);
     }
 
     // Update last_synced_at

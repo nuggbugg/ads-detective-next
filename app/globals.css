@@ -529,6 +529,17 @@ body {
   cursor: default;
 }
 
+.goal-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.goal-progress-bar-section {
+  flex: 1;
+  min-width: 0;
+}
+
 .goal-progress-bar-container {
   margin-bottom: 8px;
 }
@@ -618,6 +629,59 @@ body {
   font-weight: 700;
   font-size: 18px;
   color: var(--accent);
+}
+
+/* Revenue Donut Chart */
+.goal-revenue-donut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.donut-chart {
+  width: 110px;
+  height: 110px;
+}
+
+.donut-chart circle {
+  transition: stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.donut-total-label {
+  font-size: 8px;
+  fill: var(--text-secondary);
+  font-weight: 500;
+}
+
+.donut-total-value {
+  font-size: 10px;
+  fill: var(--text-primary);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.donut-legend-pct {
+  color: var(--text-secondary);
+  font-weight: 400;
 }
 
 @keyframes spin {
@@ -1618,6 +1682,9 @@ body {
   .dash-summary-bar { padding: 14px 16px; gap: 12px; }
   .dash-content { padding: 20px 16px; }
   .goal-progress { padding: 14px 16px; }
+  .goal-progress-row { flex-direction: column; gap: 16px; }
+  .goal-revenue-donut { flex-direction: row; gap: 16px; }
+  .donut-chart { width: 80px; height: 80px; }
   .goal-progress-bar-track { height: 14px; }
   .goal-progress-pct { font-size: 15px; }
   .goal-progress-count strong { font-size: 14px; }
