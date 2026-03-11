@@ -12,7 +12,6 @@ import type * as accounts from "../accounts.js";
 import type * as analysis from "../analysis.js";
 import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
-import type * as creativeOs from "../creativeOs.js";
 import type * as creatives from "../creatives.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
@@ -36,7 +35,6 @@ declare const fullApi: ApiFromModules<{
   analysis: typeof analysis;
   analytics: typeof analytics;
   auth: typeof auth;
-  creativeOs: typeof creativeOs;
   creatives: typeof creatives;
   crons: typeof crons;
   dashboard: typeof dashboard;
