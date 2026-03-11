@@ -136,9 +136,11 @@ export const fetchMonthlySales = action({
     // Fetch orders for current month, paginating through all
     const baseUrl =
       `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/orders.json` +
-      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250&fields=id,line_items`;
+      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250&fields=id,tags,line_items`;
 
     let totalQuantity = 0;
+    let b2bQuantity = 0;
+    let onlineQuantity = 0;
     let nextUrl: string | null = baseUrl;
 
     while (nextUrl) {
@@ -153,13 +155,21 @@ export const fetchMonthlySales = action({
 
       const data = (await res.json()) as {
         orders: Array<{
+          tags: string;
           line_items: Array<{ quantity: number }>;
         }>;
       };
 
       for (const order of data.orders) {
-        for (const item of order.line_items) {
-          totalQuantity += item.quantity;
+        const orderQty = order.line_items.reduce((s, item) => s + item.quantity, 0);
+        totalQuantity += orderQty;
+
+        // Check if order has a B2B tag (case-insensitive)
+        const tags = (order.tags || "").split(",").map((t) => t.trim().toLowerCase());
+        if (tags.includes("b2b")) {
+          b2bQuantity += orderQty;
+        } else {
+          onlineQuantity += orderQty;
         }
       }
 
@@ -177,6 +187,8 @@ export const fetchMonthlySales = action({
     // Cache the result in settings
     const cacheData = JSON.stringify({
       sold: totalQuantity,
+      b2b: b2bQuantity,
+      online: onlineQuantity,
       goal: SALES_GOAL,
       month: monthName,
       last_fetched: new Date().toISOString(),
@@ -184,7 +196,7 @@ export const fetchMonthlySales = action({
 
     await ctx.runMutation(internal.shopify._cacheSales, { data: cacheData });
 
-    return { sold: totalQuantity, goal: SALES_GOAL, month: monthName };
+    return { sold: totalQuantity, b2b: b2bQuantity, online: onlineQuantity, goal: SALES_GOAL, month: monthName };
   },
 });
 
@@ -219,6 +231,8 @@ export const getSalesGoal = query({
     try {
       return JSON.parse(cached.value) as {
         sold: number;
+        b2b: number;
+        online: number;
         goal: number;
         month: string;
         last_fetched: string;

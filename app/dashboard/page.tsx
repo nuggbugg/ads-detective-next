@@ -143,8 +143,12 @@ export default function DashboardPage() {
             <div className="goal-progress-bar-container">
               <div className="goal-progress-bar-track">
                 <div
-                  className="goal-progress-bar-fill"
-                  style={{ width: `${Math.min((data.sales_goal.sold / data.sales_goal.goal) * 100, 100)}%` }}
+                  className="goal-progress-bar-fill goal-bar-online"
+                  style={{ width: `${Math.min(((data.sales_goal.online ?? data.sales_goal.sold) / data.sales_goal.goal) * 100, 100)}%` }}
+                />
+                <div
+                  className="goal-progress-bar-fill goal-bar-b2b"
+                  style={{ width: `${Math.min(((data.sales_goal.b2b ?? 0) / data.sales_goal.goal) * 100, 100)}%` }}
                 />
               </div>
             </div>
@@ -154,6 +158,16 @@ export default function DashboardPage() {
               </span>
               <span className="goal-progress-pct">
                 {Math.round((data.sales_goal.sold / data.sales_goal.goal) * 100)}%
+              </span>
+            </div>
+            <div className="goal-progress-legend">
+              <span className="goal-legend-item">
+                <span className="goal-legend-dot goal-legend-online" />
+                Online <strong>{data.sales_goal.online ?? data.sales_goal.sold}</strong>
+              </span>
+              <span className="goal-legend-item">
+                <span className="goal-legend-dot goal-legend-b2b" />
+                B2B <strong>{data.sales_goal.b2b ?? 0}</strong>
               </span>
             </div>
           </div>

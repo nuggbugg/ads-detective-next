@@ -95,7 +95,7 @@ export const get = query({
       .query("settings")
       .withIndex("by_key", (q) => q.eq("key", "shopify_access_token"))
       .first();
-    let salesGoal: { sold: number; goal: number; month: string; last_fetched: string } | null = null;
+    let salesGoal: { sold: number; b2b: number; online: number; goal: number; month: string; last_fetched: string } | null = null;
     if (shopifyToken?.value) {
       const cached = await ctx.db
         .query("settings")
