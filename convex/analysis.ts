@@ -51,6 +51,7 @@ export const _analyzeOneImpl = internalAction({
         offer_type: result.offer_type,
         funnel_stage: result.funnel_stage,
         summary: result.summary,
+        recommendations: result.recommendations,
         analysis_status: "completed",
         analyzed_at: new Date().toISOString(),
       },

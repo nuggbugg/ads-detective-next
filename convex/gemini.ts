@@ -23,6 +23,7 @@ interface AnalysisResult {
   offer_type: string;
   funnel_stage: string;
   summary: string;
+  recommendations: string;
 }
 
 // Fetch image and convert to base64 for Gemini multimodal
@@ -80,7 +81,8 @@ Respond with a JSON object containing these fields:
 - hook_tactic: One of "Question", "Bold Claim", "Statistic", "Story", "Problem Statement", "Curiosity Gap", "Social Proof Lead", "Controversy", "Other"
 - offer_type: One of "Discount", "Free Trial", "Free Shipping", "Bundle", "BOGO", "Limited Time", "Evergreen", "Lead Magnet", "None", "Other"
 - funnel_stage: One of "TOF", "MOF", "BOF"
-- summary: A 1-2 sentence summary of the creative's visual approach, messaging, and positioning${hasImage ? " based on what you see in the image" : ""}`;
+- summary: A 1-2 sentence summary of the creative's visual approach, messaging, and positioning${hasImage ? " based on what you see in the image" : ""}
+- recommendations: 3-5 specific, actionable improvement suggestions as a JSON array of strings. Focus on: alternative hooks that could work better, visual improvements, copy changes, audience targeting ideas, and iteration concepts. Be specific and reference the actual creative — e.g. "Try a question-based hook like 'Still struggling with X?' instead of the current problem statement" or "Test a close-up product shot variant to increase thumb-stop rate". Each suggestion should be one clear sentence.`;
 
   // Build contents — text-only or multimodal with image
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -115,15 +117,27 @@ Respond with a JSON object containing these fields:
           offer_type: { type: "string" },
           funnel_stage: { type: "string" },
           summary: { type: "string" },
+          recommendations: {
+            type: "array",
+            items: { type: "string" },
+          },
         },
         required: [
           "asset_type", "visual_format", "messaging_angle",
           "hook_tactic", "offer_type", "funnel_stage", "summary",
+          "recommendations",
         ],
       },
     },
   });
 
   const text = response.text;
-  return JSON.parse(text!) as AnalysisResult;
+  const parsed = JSON.parse(text!);
+  // Serialize recommendations array to JSON string for storage
+  return {
+    ...parsed,
+    recommendations: Array.isArray(parsed.recommendations)
+      ? JSON.stringify(parsed.recommendations)
+      : parsed.recommendations,
+  } as AnalysisResult;
 }

@@ -163,6 +163,7 @@ export const updateAnalysis = internalMutation({
       offer_type: v.optional(v.string()),
       funnel_stage: v.optional(v.string()),
       summary: v.optional(v.string()),
+      recommendations: v.optional(v.string()),
       analysis_status: v.string(),
       analyzed_at: v.optional(v.string()),
     }),

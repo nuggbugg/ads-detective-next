@@ -446,7 +446,7 @@ export default function CreativesPage() {
       </p>
 
       {/* Detail Modal */}
-      <Modal isOpen={!!selectedCreative} onClose={() => setSelectedId(null)}>
+      <Modal isOpen={!!selectedCreative} onClose={() => setSelectedId(null)} size="xlarge">
         {selectedCreative && (
           <>
             <button className="creative-modal-close" onClick={() => setSelectedId(null)}>
@@ -568,6 +568,27 @@ export default function CreativesPage() {
                     <p>{selectedCreative.summary}</p>
                   </div>
                 )}
+
+                {selectedCreative.recommendations && (() => {
+                  let recs: string[] = [];
+                  try { recs = JSON.parse(selectedCreative.recommendations); } catch { /* ignore */ }
+                  if (!recs.length) return null;
+                  return (
+                    <div className="creative-modal-recommendations">
+                      <h4 className="creative-modal-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14" style={{ marginRight: 6, verticalAlign: -2 }}>
+                          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                        </svg>
+                        Recommended Improvements
+                      </h4>
+                      <ul className="creative-modal-recs-list">
+                        {recs.map((rec, i) => (
+                          <li key={i}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
 
                 <div className="creative-modal-actions">
                   <button
