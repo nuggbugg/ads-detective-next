@@ -136,7 +136,7 @@ export const fetchMonthlySales = action({
     // Fetch orders for current month, paginating through all
     const baseUrl =
       `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/orders.json` +
-      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250&fields=id,tags,line_items`;
+      `?status=any&created_at_min=${monthStart.toISOString()}&limit=250&fields=id,tags,line_items,discount_codes`;
 
     let totalQuantity = 0;
     let b2bQuantity = 0;
@@ -157,16 +157,26 @@ export const fetchMonthlySales = action({
         orders: Array<{
           tags: string;
           line_items: Array<{ quantity: number }>;
+          discount_codes?: Array<{ code: string }>;
         }>;
       };
 
+      console.log(`Shopify: fetched ${data.orders.length} orders in this page`);
       for (const order of data.orders) {
         const orderQty = order.line_items.reduce((s, item) => s + item.quantity, 0);
         totalQuantity += orderQty;
 
-        // Check if order has a B2B tag (case-insensitive)
+        // Check if order is B2B via tags OR discount codes (case-insensitive)
         const tags = (order.tags || "").split(",").map((t) => t.trim().toLowerCase());
-        if (tags.includes("b2b")) {
+        const hasB2BTag = tags.includes("b2b");
+        const discountCodes = (order.discount_codes || []).map((d) => d.code);
+        const hasB2BDiscount = discountCodes.some(
+          (code) => code.toLowerCase() === "b2b"
+        );
+        const isB2B = hasB2BTag || hasB2BDiscount;
+
+        if (isB2B) {
+          console.log(`  B2B order detected: qty=${orderQty}, tags="${order.tags}", discounts=[${discountCodes.join(",")}]`);
           b2bQuantity += orderQty;
         } else {
           onlineQuantity += orderQty;
@@ -183,6 +193,8 @@ export const fetchMonthlySales = action({
         }
       }
     }
+
+    console.log(`Shopify sales summary: total=${totalQuantity}, online=${onlineQuantity}, b2b=${b2bQuantity}`);
 
     // Cache the result in settings
     const cacheData = JSON.stringify({
