@@ -26,25 +26,34 @@ export default function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false);
   const autoFetchedRef = useRef(false);
 
-  // Auto-fetch sales when Shopify is connected but no cached data,
-  // or when cached data is older than 1 hour
+  // Auto-fetch sales on mount, and refresh every 10 minutes in the background
   useEffect(() => {
-    if (!data || autoFetchedRef.current) return;
-    if (!data.has_shopify) return;
+    if (!data || !data.has_shopify) return;
 
-    const needsFetch =
-      !data.sales_goal ||
-      (data.sales_goal.last_fetched &&
-        Date.now() - new Date(data.sales_goal.last_fetched).getTime() > 60 * 60 * 1000);
-
-    if (needsFetch) {
-      autoFetchedRef.current = true;
+    const doFetch = () => {
+      if (refreshing) return; // skip if already running
       setRefreshing(true);
       fetchSales()
         .catch(() => {})
         .finally(() => setRefreshing(false));
+    };
+
+    // Fetch on mount if no data or data older than 5 min
+    if (!autoFetchedRef.current) {
+      const stale =
+        !data.sales_goal ||
+        !data.sales_goal.last_fetched ||
+        Date.now() - new Date(data.sales_goal.last_fetched).getTime() > 5 * 60 * 1000;
+      if (stale) {
+        autoFetchedRef.current = true;
+        doFetch();
+      }
     }
-  }, [data, fetchSales]);
+
+    // Background refresh every 10 minutes
+    const interval = setInterval(doFetch, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [data, data?.has_shopify, data?.sales_goal?.last_fetched, fetchSales]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!data) return <PageLoader />;
 

@@ -22,7 +22,26 @@ export default function CreativesPage() {
     campaign_objective?: string;
   }>({ delivery: "had_delivery" });
 
-  const creatives = useQuery(api.creatives.list, filters);
+  // Auto-set campaign_objective filter based on campaign_goal in settings
+  const goalToObjective: Record<string, string> = {
+    roas: "OUTCOME_SALES",
+    lead_gen: "OUTCOME_LEADS",
+    traffic: "OUTCOME_TRAFFIC",
+  };
+  const settingsGoal = typeof settings?.campaign_goal === "string" ? settings.campaign_goal : "";
+  const defaultObjective = goalToObjective[settingsGoal] || "";
+
+  // Apply default objective filter if user hasn't explicitly changed it
+  const [userChangedObjective, setUserChangedObjective] = useState(false);
+
+  // Merge in default objective from settings if user hasn't overridden it
+  const effectiveFilters = {
+    ...filters,
+    campaign_objective: userChangedObjective
+      ? filters.campaign_objective
+      : (filters.campaign_objective || defaultObjective || undefined),
+  };
+  const creatives = useQuery(api.creatives.list, effectiveFilters);
   const filterOptions = useQuery(api.creatives.getFilterOptions);
   const settings = useQuery(api.settings.getAll);
   const analyzeOne = useAction(api.analysis.analyzeOne);
@@ -96,6 +115,7 @@ export default function CreativesPage() {
   };
 
   const updateFilter = (key: string, value: string) => {
+    if (key === "campaign_objective") setUserChangedObjective(true);
     setFilters((prev) => {
       const next = { ...prev };
       if (value) {
@@ -161,18 +181,18 @@ export default function CreativesPage() {
             value={filters.delivery || ""}
             onChange={(e) => updateFilter("delivery", e.target.value)}
           >
-            <option value="">All</option>
+            <option value="">All delivery</option>
             <option value="had_delivery">Had delivery</option>
             <option value="active">Active only</option>
           </select>
           <select
             className="input input-sm"
-            value={filters.campaign_objective || ""}
+            value={effectiveFilters.campaign_objective || ""}
             onChange={(e) => updateFilter("campaign_objective", e.target.value)}
           >
             <option value="">All objectives</option>
             {(filterOptions.campaign_objectives ?? []).map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{o.replace("OUTCOME_", "")}</option>
             ))}
           </select>
           <select
