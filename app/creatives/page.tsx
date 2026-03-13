@@ -11,6 +11,13 @@ import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { Tip } from "@/components/ui/Tooltip";
 
 export default function CreativesPage() {
+  const filterOptions = useQuery(api.creatives.getFilterOptions);
+  const settings = useQuery(api.settings.getAll);
+  const analyzeOne = useAction(api.analysis.analyzeOne);
+  const analyzeAll = useAction(api.analysis.analyzeUnanalyzed);
+  const toast = useToast();
+  const fmt = useCurrencyFormatter();
+
   const [filters, setFilters] = useState<{
     account_id?: string;
     ad_type?: string;
@@ -31,7 +38,6 @@ export default function CreativesPage() {
   const settingsGoal = typeof settings?.campaign_goal === "string" ? settings.campaign_goal : "";
   const defaultObjective = goalToObjective[settingsGoal] || "";
 
-  // Apply default objective filter if user hasn't explicitly changed it
   const [userChangedObjective, setUserChangedObjective] = useState(false);
 
   // Merge in default objective from settings if user hasn't overridden it
@@ -42,12 +48,6 @@ export default function CreativesPage() {
       : (filters.campaign_objective || defaultObjective || undefined),
   };
   const creatives = useQuery(api.creatives.list, effectiveFilters);
-  const filterOptions = useQuery(api.creatives.getFilterOptions);
-  const settings = useQuery(api.settings.getAll);
-  const analyzeOne = useAction(api.analysis.analyzeOne);
-  const analyzeAll = useAction(api.analysis.analyzeUnanalyzed);
-  const toast = useToast();
-  const fmt = useCurrencyFormatter();
 
   const [selectedId, setSelectedId] = useState<Id<"creatives"> | null>(null);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
