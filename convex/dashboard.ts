@@ -42,6 +42,7 @@ export const get = query({
       filtered_active: goalCreatives.filter((c) => c.ad_status === "ACTIVE").length,
       with_delivery: withDelivery.length,
       total_spend: goalCreatives.reduce((s, c) => s + c.spend, 0),
+      all_spend: allCreatives.reduce((s, c) => s + c.spend, 0),
       total_purchase_value: goalCreatives.reduce((s, c) => s + c.purchase_value, 0),
       avg_roas: (() => {
         const totalSpend = goalCreatives.reduce((s, c) => s + c.spend, 0);

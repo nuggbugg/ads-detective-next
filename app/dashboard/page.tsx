@@ -326,13 +326,31 @@ export default function DashboardPage() {
                   <div className="dash-metric-value">{fmt(cacValue)}</div>
                   <div className="dash-metric-sub"><Tip label="Avg CTR">{m.avg_ctr.toFixed(2)}% CTR</Tip></div>
                 </div>
-                <div className="dash-metric-card">
-                  <div className="dash-metric-top">
-                    <span className="dash-metric-label"><Tip label="Creatives" /></span>
+                {data.sales_goal && (data.sales_goal.total_revenue || 0) > 0 ? (
+                  <div className="dash-metric-card">
+                    <div className="dash-metric-top">
+                      <span className="dash-metric-label"><Tip label="Blended ROAS" /></span>
+                    </div>
+                    <div className="dash-metric-value">
+                      {m.all_spend > 0
+                        ? ((data.sales_goal.total_revenue || 0) / m.all_spend).toFixed(2) + "x"
+                        : "—"}
+                    </div>
+                    <div className="dash-metric-sub">
+                      <Tip label="Revenue / All Ad Spend">
+                        {fmt(data.sales_goal.total_revenue || 0)} rev / {fmt(m.all_spend)} spend
+                      </Tip>
+                    </div>
                   </div>
-                  <div className="dash-metric-value">{m.filtered_creatives}</div>
-                  <div className="dash-metric-sub"><Tip label="Active Ads">{m.filtered_active} active</Tip></div>
-                </div>
+                ) : (
+                  <div className="dash-metric-card">
+                    <div className="dash-metric-top">
+                      <span className="dash-metric-label"><Tip label="Creatives" /></span>
+                    </div>
+                    <div className="dash-metric-value">{m.filtered_creatives}</div>
+                    <div className="dash-metric-sub"><Tip label="Active Ads">{m.filtered_active} active</Tip></div>
+                  </div>
+                )}
               </div>
 
               <div className="dash-grid">
