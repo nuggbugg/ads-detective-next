@@ -712,15 +712,12 @@ body {
 
 .dash-actions { display: flex; align-items: center; gap: 10px; }
 
-.dash-date-select {
+.dash-date-label {
   font-family: var(--font-body); font-size: 13px;
-  padding: 6px 12px; border-radius: var(--radius-pill);
-  background: var(--card-bg); color: var(--text-primary);
+  padding: 6px 14px; border-radius: var(--radius-pill);
+  background: var(--card-bg); color: var(--text-secondary);
   border: 1px solid var(--border-soft);
-  cursor: pointer; appearance: auto;
-  min-width: 140px;
 }
-.dash-date-select:hover { border-color: var(--accent); }
 
 .dash-metrics-secondary {
   margin-top: -8px;

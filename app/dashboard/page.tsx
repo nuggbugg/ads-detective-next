@@ -18,39 +18,8 @@ function formatTimeAgo(iso: string) {
   return `${days}d ago`;
 }
 
-function getDateRange(preset: string): { from?: string; to?: string } {
-  const today = new Date();
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-  const to = fmt(today);
-  switch (preset) {
-    case "today": return { from: to, to };
-    case "7d": {
-      const d = new Date(today); d.setDate(d.getDate() - 7);
-      return { from: fmt(d), to };
-    }
-    case "30d": {
-      const d = new Date(today); d.setDate(d.getDate() - 30);
-      return { from: fmt(d), to };
-    }
-    case "this_month": {
-      const d = new Date(today.getFullYear(), today.getMonth(), 1);
-      return { from: fmt(d), to };
-    }
-    case "90d": {
-      const d = new Date(today); d.setDate(d.getDate() - 90);
-      return { from: fmt(d), to };
-    }
-    default: return {}; // "all" — no filter
-  }
-}
-
 export default function DashboardPage() {
-  const [datePreset, setDatePreset] = useState("all");
-  const dateRange = getDateRange(datePreset);
-  const data = useQuery(api.dashboard.get, {
-    date_from: dateRange.from,
-    date_to: dateRange.to,
-  });
+  const data = useQuery(api.dashboard.get, {});
   const settings = useQuery(api.settings.getAll);
   const fmt = useCurrencyFormatter();
   const fetchSales = useAction(api.shopify.fetchMonthlySales);
@@ -315,18 +284,9 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="dash-actions">
-              <select
-                className="dash-date-select"
-                value={datePreset}
-                onChange={(e) => setDatePreset(e.target.value)}
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="this_month">This Month</option>
-                <option value="30d">Last 30 Days</option>
-                <option value="90d">Last 90 Days</option>
-              </select>
+              <span className="dash-date-label">
+                Last {settings?.date_range_days || "30"} days
+              </span>
               <span className="dash-goal-badge">{goalLabel}</span>
             </div>
           </div>
