@@ -18,8 +18,39 @@ function formatTimeAgo(iso: string) {
   return `${days}d ago`;
 }
 
+function getDateRange(preset: string): { from?: string; to?: string } {
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const to = fmt(today);
+  switch (preset) {
+    case "today": return { from: to, to };
+    case "7d": {
+      const d = new Date(today); d.setDate(d.getDate() - 7);
+      return { from: fmt(d), to };
+    }
+    case "30d": {
+      const d = new Date(today); d.setDate(d.getDate() - 30);
+      return { from: fmt(d), to };
+    }
+    case "this_month": {
+      const d = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { from: fmt(d), to };
+    }
+    case "90d": {
+      const d = new Date(today); d.setDate(d.getDate() - 90);
+      return { from: fmt(d), to };
+    }
+    default: return {}; // "all" — no filter
+  }
+}
+
 export default function DashboardPage() {
-  const data = useQuery(api.dashboard.get);
+  const [datePreset, setDatePreset] = useState("all");
+  const dateRange = getDateRange(datePreset);
+  const data = useQuery(api.dashboard.get, {
+    date_from: dateRange.from,
+    date_to: dateRange.to,
+  });
   const settings = useQuery(api.settings.getAll);
   const fmt = useCurrencyFormatter();
   const fetchSales = useAction(api.shopify.fetchMonthlySales);
@@ -284,6 +315,18 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="dash-actions">
+              <select
+                className="dash-date-select"
+                value={datePreset}
+                onChange={(e) => setDatePreset(e.target.value)}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="7d">Last 7 Days</option>
+                <option value="this_month">This Month</option>
+                <option value="30d">Last 30 Days</option>
+                <option value="90d">Last 90 Days</option>
+              </select>
               <span className="dash-goal-badge">{goalLabel}</span>
             </div>
           </div>
@@ -352,6 +395,45 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
+
+              {/* MRR & Revenue Breakdown */}
+              {data.sales_goal && (data.sales_goal.total_revenue || 0) > 0 && (() => {
+                const sg = data.sales_goal;
+                const subRev = sg.subscription_revenue || 0;
+                const oneRev = sg.onetime_revenue || 0;
+                const subOrders = sg.subscription_orders || 0;
+                const oneOrders = sg.onetime_orders || 0;
+                const totalRev = sg.total_revenue || 0;
+                const subPct = totalRev > 0 ? Math.round((subRev / totalRev) * 100) : 0;
+                const onePct = 100 - subPct;
+                const fmtKr = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k kr` : `${Math.round(n)} kr`;
+
+                return (
+                  <div className="dash-metrics dash-metrics-secondary">
+                    <div className="dash-metric-card">
+                      <div className="dash-metric-top">
+                        <span className="dash-metric-label"><Tip label="MRR (Subscriptions)" /></span>
+                      </div>
+                      <div className="dash-metric-value">{fmtKr(subRev)}</div>
+                      <div className="dash-metric-sub">{subOrders} subscription orders ({subPct}%)</div>
+                    </div>
+                    <div className="dash-metric-card">
+                      <div className="dash-metric-top">
+                        <span className="dash-metric-label"><Tip label="One-time Revenue" /></span>
+                      </div>
+                      <div className="dash-metric-value">{fmtKr(oneRev)}</div>
+                      <div className="dash-metric-sub">{oneOrders} one-time orders ({onePct}%)</div>
+                    </div>
+                    <div className="dash-metric-card">
+                      <div className="dash-metric-top">
+                        <span className="dash-metric-label"><Tip label="Total Revenue" /></span>
+                      </div>
+                      <div className="dash-metric-value">{fmtKr(totalRev)}</div>
+                      <div className="dash-metric-sub">{subOrders + oneOrders} total orders</div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="dash-grid">
                 {/* Top Performers */}

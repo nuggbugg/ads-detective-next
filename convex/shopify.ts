@@ -148,6 +148,10 @@ export const fetchMonthlySales = action({
     let onlineQuantity = 0;
     let b2bRevenue = 0;
     let onlineRevenue = 0;
+    let subscriptionRevenue = 0;
+    let subscriptionOrders = 0;
+    let onetimeRevenue = 0;
+    let onetimeOrders = 0;
     let nextUrl: string | null = baseUrl;
 
     while (nextUrl) {
@@ -165,8 +169,13 @@ export const fetchMonthlySales = action({
           id: number;
           tags: string;
           total_price: string;
+          source_name?: string;
           customer?: { tags?: string };
-          line_items: Array<{ quantity: number }>;
+          line_items: Array<{
+            quantity: number;
+            properties?: Array<{ name: string; value: string }>;
+            selling_plan_allocation?: unknown;
+          }>;
         }>;
       };
 
@@ -183,6 +192,29 @@ export const fetchMonthlySales = action({
         // Debug: log tags for first few orders to verify data
         if (data.orders.indexOf(order) < 5) {
           console.log(`Order ${order.id}: orderTags=[${orderTags}] customerTags=[${customerTags}] isB2B=${isB2B} revenue=${orderRevenue}`);
+        }
+
+        // Detect subscription orders:
+        // 1. Order tags contain "subscription"
+        // 2. Source name is "subscription_contract"
+        // 3. Line items have selling_plan_allocation or subscription-related properties
+        const isSubscription =
+          orderTags.some((t) => t.includes("subscription")) ||
+          (order.source_name || "").toLowerCase().includes("subscription") ||
+          order.line_items.some((li) =>
+            li.selling_plan_allocation != null ||
+            (li.properties || []).some((p) =>
+              p.name.toLowerCase().includes("subscription") ||
+              p.name.toLowerCase().includes("selling_plan")
+            )
+          );
+
+        if (isSubscription) {
+          subscriptionRevenue += orderRevenue;
+          subscriptionOrders++;
+        } else {
+          onetimeRevenue += orderRevenue;
+          onetimeOrders++;
         }
 
         if (isB2B) {
@@ -220,6 +252,11 @@ export const fetchMonthlySales = action({
       b2b_revenue: Math.round(b2bRevenue),
       online_revenue: Math.round(onlineRevenue),
       total_revenue: Math.round(totalRevenue),
+      subscription_revenue: Math.round(subscriptionRevenue),
+      subscription_orders: subscriptionOrders,
+      onetime_revenue: Math.round(onetimeRevenue),
+      onetime_orders: onetimeOrders,
+      mrr: Math.round(subscriptionRevenue), // MRR = subscription revenue this month
       goal: SALES_GOAL,
       month: monthName,
       last_fetched: new Date().toISOString(),
@@ -227,7 +264,15 @@ export const fetchMonthlySales = action({
 
     await ctx.runMutation(internal.shopify._cacheSales, { data: cacheData });
 
-    return { sold: totalQuantity, b2b: b2bQuantity, online: onlineQuantity, b2b_revenue: Math.round(b2bRevenue), online_revenue: Math.round(onlineRevenue), total_revenue: Math.round(totalRevenue), goal: SALES_GOAL, month: monthName };
+    return {
+      sold: totalQuantity, b2b: b2bQuantity, online: onlineQuantity,
+      b2b_revenue: Math.round(b2bRevenue), online_revenue: Math.round(onlineRevenue),
+      total_revenue: Math.round(totalRevenue),
+      subscription_revenue: Math.round(subscriptionRevenue), subscription_orders: subscriptionOrders,
+      onetime_revenue: Math.round(onetimeRevenue), onetime_orders: onetimeOrders,
+      mrr: Math.round(subscriptionRevenue),
+      goal: SALES_GOAL, month: monthName,
+    };
   },
 });
 

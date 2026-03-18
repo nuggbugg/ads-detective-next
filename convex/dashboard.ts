@@ -1,12 +1,26 @@
 import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { v } from "convex/values";
 
 export const get = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    date_from: v.optional(v.string()),
+    date_to: v.optional(v.string()),
+  },
+  handler: async (ctx, { date_from, date_to }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return null;
-    const allCreatives = await ctx.db.query("creatives").collect();
+    let allCreatives = await ctx.db.query("creatives").collect();
+
+    // Filter by date range if specified
+    if (date_from || date_to) {
+      allCreatives = allCreatives.filter((c) => {
+        const ds = c.date_start || "";
+        if (date_from && ds < date_from) return false;
+        if (date_to && ds > date_to) return false;
+        return true;
+      });
+    }
     const allAccounts = await ctx.db.query("ad_accounts").collect();
 
     // Get campaign goal from settings
@@ -116,7 +130,13 @@ export const get = query({
       .query("settings")
       .withIndex("by_key", (q) => q.eq("key", "shopify_access_token"))
       .first();
-    let salesGoal: { sold: number; b2b: number; online: number; b2b_revenue: number; online_revenue: number; total_revenue: number; goal: number; month: string; last_fetched: string } | null = null;
+    let salesGoal: {
+      sold: number; b2b: number; online: number;
+      b2b_revenue: number; online_revenue: number; total_revenue: number;
+      subscription_revenue: number; subscription_orders: number;
+      onetime_revenue: number; onetime_orders: number; mrr: number;
+      goal: number; month: string; last_fetched: string;
+    } | null = null;
     if (shopifyToken?.value) {
       const cached = await ctx.db
         .query("settings")
