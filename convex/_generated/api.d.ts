@@ -23,6 +23,7 @@ import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
 import type * as shopify from "../shopify.js";
 import type * as sync from "../sync.js";
+import type * as weeklyReport from "../weeklyReport.js";
 
 import type {
   ApiFromModules,
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   shopify: typeof shopify;
   sync: typeof sync;
+  weeklyReport: typeof weeklyReport;
 }>;
 
 /**
