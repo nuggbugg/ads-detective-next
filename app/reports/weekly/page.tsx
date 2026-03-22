@@ -442,11 +442,19 @@ export default function WeeklyReportPage() {
                 <tr>
                   <Tip label="CAC vs Break-even" />
                   <td className={w.blended_cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>
-                    {w.blended_cac > 0 ? `${w.blended_cac > weekBECAC ? "+" : ""}${fmtKr(w.blended_cac - weekBECAC)}` : "—"}
+                    {w.blended_cac > 0
+                      ? w.blended_cac > weekBECAC
+                        ? `+${fmtKr(w.blended_cac - weekBECAC)} over`
+                        : `${fmtKr(weekBECAC - w.blended_cac)} under`
+                      : "—"}
                   </td>
                   <td />
                   <td className={m.blended_cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>
-                    {m.blended_cac > 0 ? `${m.blended_cac > mtdBECAC ? "+" : ""}${fmtKr(m.blended_cac - mtdBECAC)}` : "—"}
+                    {m.blended_cac > 0
+                      ? m.blended_cac > mtdBECAC
+                        ? `+${fmtKr(m.blended_cac - mtdBECAC)} over`
+                        : `${fmtKr(mtdBECAC - m.blended_cac)} under`
+                      : "—"}
                   </td>
                 </tr>
                 <tr>
