@@ -290,9 +290,10 @@ export const gather = action({
       metaWeek = parseIns(wIns);
       metaPrevWeek = parseIns(pwIns);
       metaMtd = parseIns(mIns);
-      weekAds = [...wAdsData].sort((a, b) => b.roas - a.roas).slice(0, 5);
-      prevWeekAds = [...pwAdsData].sort((a, b) => b.roas - a.roas).slice(0, 5);
-      mtdAds = [...mAdsData].sort((a, b) => b.roas - a.roas).slice(0, 5);
+      const MIN_SPEND_FOR_TOP = 300;
+      weekAds = [...wAdsData].filter((a) => a.spend >= MIN_SPEND_FOR_TOP).sort((a, b) => b.roas - a.roas).slice(0, 3);
+      prevWeekAds = [...pwAdsData].filter((a) => a.spend >= MIN_SPEND_FOR_TOP).sort((a, b) => b.roas - a.roas).slice(0, 3);
+      mtdAds = [...mAdsData].filter((a) => a.spend >= MIN_SPEND_FOR_TOP).sort((a, b) => b.roas - a.roas).slice(0, 3);
 
       // === CREATIVE HEALTH: Compare current vs prev week per ad ===
     }
