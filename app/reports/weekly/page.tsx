@@ -102,7 +102,14 @@ const TIPS: Record<string, string> = {
 
 function Tip({ label, customTip }: { label: string; customTip?: string }) {
   const tip = customTip || TIPS[label] || "";
-  return <td title={tip}>{label}</td>;
+  if (!tip) return <td>{label}</td>;
+  return (
+    <td className="pres-tip-cell">
+      {label}
+      <span className="pres-tip-icon">?</span>
+      <span className="pres-tip-bubble">{tip}</span>
+    </td>
+  );
 }
 
 // --- Insight Engine ---

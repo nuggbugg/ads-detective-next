@@ -355,28 +355,69 @@ export const gather = action({
       const fetchAnalytics = async (since: string, until: string, orderCount: number): Promise<AnalyticsData> => {
         try {
           const shopifyQL = `FROM sessions SINCE ${since} UNTIL ${until} SHOW sum(sessions) AS sessions, sum(addedToCartSessions) AS atc, sum(convertedSessions) AS checkouts`;
-          const gqlQuery = JSON.stringify({
-            query: `{ shopifyqlQuery(query: "${shopifyQL.replace(/"/g, '\\"')}") { __typename ... on TableResponse { tableData { rowData columns { name } } } } }`,
-          });
+          const gqlBody = {
+            query: `{
+              shopifyqlQuery(query: "${shopifyQL.replace(/"/g, '\\"')}") {
+                __typename
+                ... on TableResponse {
+                  tableData {
+                    rowData
+                    columns { name dataType }
+                  }
+                }
+                ... on PolarisVizResponse {
+                  data { key data { key value } }
+                }
+              }
+            }`,
+          };
           const gqlUrl = `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`;
           const res = await fetch(gqlUrl, {
             method: "POST",
             headers: { "X-Shopify-Access-Token": tokens.shopifyToken, "Content-Type": "application/json" },
-            body: gqlQuery,
+            body: JSON.stringify(gqlBody),
           });
-          if (!res.ok) return emptyAnalytics;
+          if (!res.ok) {
+            console.log("ShopifyQL HTTP error:", res.status);
+            return emptyAnalytics;
+          }
           const data = await res.json();
+          console.log("ShopifyQL response type:", data?.data?.shopifyqlQuery?.__typename);
+
+          // Handle TableResponse
           const table = data?.data?.shopifyqlQuery?.tableData;
           if (table?.rowData?.length > 0) {
             const cols: string[] = (table.columns || []).map((c: any) => c.name);
             const row = table.rowData[0];
+            console.log("ShopifyQL columns:", cols, "row:", row);
             const sessions = parseInt(row[cols.indexOf("sessions")]) || 0;
             const atc = parseInt(row[cols.indexOf("atc")]) || 0;
             const checkouts = parseInt(row[cols.indexOf("checkouts")]) || 0;
             const cr = sessions > 0 ? Math.round((orderCount / sessions) * 10000) / 100 : 0;
             return { sessions, atc, checkouts, cr };
           }
-        } catch { /* ignore analytics errors */ }
+
+          // Handle PolarisVizResponse (some Shopify versions return this)
+          const vizData = data?.data?.shopifyqlQuery?.data;
+          if (vizData) {
+            console.log("ShopifyQL PolarisViz data:", JSON.stringify(vizData).slice(0, 200));
+            let sessions = 0, atc = 0, checkouts = 0;
+            for (const series of vizData) {
+              const key = (series.key || "").toLowerCase();
+              const val = series.data?.[0]?.value;
+              if (key.includes("sessions") && !key.includes("added") && !key.includes("converted")) sessions = parseInt(val) || 0;
+              if (key.includes("added") || key.includes("atc")) atc = parseInt(val) || 0;
+              if (key.includes("converted") || key.includes("checkout")) checkouts = parseInt(val) || 0;
+            }
+            const cr = sessions > 0 ? Math.round((orderCount / sessions) * 10000) / 100 : 0;
+            return { sessions, atc, checkouts, cr };
+          }
+
+          // Log unexpected response shape
+          console.log("ShopifyQL unexpected:", JSON.stringify(data).slice(0, 300));
+        } catch (e) {
+          console.log("ShopifyQL error:", e);
+        }
         return emptyAnalytics;
       };
 
