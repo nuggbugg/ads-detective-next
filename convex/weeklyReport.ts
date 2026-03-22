@@ -53,7 +53,7 @@ export const _getFunnelData = internalQuery({
       };
     }
 
-    // Build ad_name → image URL map
+    // Build ad_name → image URL map (sanitize keys for Convex)
     const imageMap: Record<string, string> = {};
     for (const c of creatives) {
       let url = c.image_url || c.thumbnail_url || null;
@@ -61,7 +61,11 @@ export const _getFunnelData = internalQuery({
         const storageUrl = await ctx.storage.getUrl(c.image_storage_id);
         if (storageUrl) url = storageUrl;
       }
-      if (url && c.ad_name) imageMap[c.ad_name] = url;
+      if (url && c.ad_name) {
+        // Replace non-ASCII chars with underscore for valid Convex field names
+        const safeKey = c.ad_name.replace(/[^\x20-\x7E]/g, "_");
+        imageMap[safeKey] = url;
+      }
     }
 
     return { stages: result, imageMap };
@@ -320,7 +324,10 @@ export const gather = action({
 
     // Attach image URLs to top creatives
     const attachImages = (ads: AdData[]) =>
-      ads.map((a) => ({ ...a, image_url: imageMap[a.name] || null }));
+      ads.map((a) => ({
+        ...a,
+        image_url: imageMap[a.name.replace(/[^\x20-\x7E]/g, "_")] || null,
+      }));
 
     const blendedFn = (rev: number, spend: number) => spend > 0 ? Math.round((rev / spend) * 100) / 100 : 0;
     const cacFn = (spend: number, purchases: number) => purchases > 0 ? Math.round(spend / purchases) : 0;
