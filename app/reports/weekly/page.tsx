@@ -76,6 +76,35 @@ function cleanAdName(name: string): string {
   return name.replace(/_/g, " ").replace(/\d{1,2}Ma[rR]$/i, "").trim();
 }
 
+// Tooltip descriptions for all metrics
+const TIPS: Record<string, string> = {
+  "Revenue": "Total online revenue from Shopify (excl. B2B). Includes one-time and subscription orders.",
+  "Orders": "Number of online orders placed on Shopify this period (excl. B2B).",
+  "AOV": "Average Order Value = Revenue / Orders. Higher AOV means more revenue per customer.",
+  "MRR (Subscriptions)": "Monthly Recurring Revenue from subscription orders. Predictable income stream.",
+  "New Customers": "Customers placing their first order. High % = strong acquisition.",
+  "Returning Customers": "Customers who have ordered before. Sign of product-market fit and retention.",
+  "CR (Session→Purchase)": "Conversion Rate = Purchases / Sessions. Measures how well your site converts visitors.",
+  "Spend": "Total ad spend on Meta (Facebook/Instagram) for this period.",
+  "Blended ROAS": "Blended Return on Ad Spend = Total Shopify Revenue / Total Meta Spend. The most accurate ROAS since it captures all purchases, not just Meta-tracked ones.",
+  "Meta ROAS": "Meta-reported ROAS. Only counts purchases Meta can track (often understated due to iOS privacy).",
+  "Blended CAC": "Blended Customer Acquisition Cost = Total Meta Spend / Total Shopify Orders. More accurate than Meta CAC.",
+  "Meta CAC": "Meta-only CAC = Spend / Meta-attributed Purchases. Often overstated since Meta misses some conversions.",
+  "Purchases": "Number of purchases Meta tracked via pixel. Usually lower than actual Shopify orders.",
+  "CTR": "Click-Through Rate = Clicks / Impressions. Measures how compelling your ads are. Good DTC benchmark: 1.5-3%.",
+  "CR (Click→Purchase)": "Conversion Rate from ad click to purchase. Measures landing page + checkout effectiveness.",
+  "Gross Margin": "Revenue minus COGS per unit. What you keep after product cost. Higher = more room for ad spend.",
+  "Break-even CAC": "Maximum CAC before losing money = AOV - COGS. Your CAC ceiling.",
+  "Blended CAC ": "Total Meta Spend / Total Shopify Orders. Should be below Break-even CAC for profitability.",
+  "CAC vs Break-even": "Difference between actual CAC and break-even. Negative (green) = profitable. Positive (red) = losing money per customer.",
+  "Meta CAC (for reference)": "Meta-only CAC shown for reference. Usually higher than blended since Meta under-reports conversions.",
+};
+
+function Tip({ label, customTip }: { label: string; customTip?: string }) {
+  const tip = customTip || TIPS[label] || "";
+  return <td title={tip}>{label}</td>;
+}
+
 // --- Insight Engine ---
 function getScoreboardInsight(w: PeriodData, pw: PeriodData): Insight {
   const revDelta = delta(w.shopify.revenue, pw.shopify.revenue);
@@ -223,44 +252,44 @@ export default function WeeklyReportPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td>Revenue</td>
+                  <Tip label="Revenue" />
                   <td className="pres-val-accent">{fmtKr(w.shopify.revenue)}</td>
                   <td><DeltaBadge curr={w.shopify.revenue} prev={pw.shopify.revenue} /></td>
                   <td>{fmtKr(m.shopify.revenue)}</td>
                 </tr>
                 <tr>
-                  <td>Orders</td>
+                  <Tip label="Orders" />
                   <td>{fmtNum(w.shopify.orders)}</td>
                   <td><DeltaBadge curr={w.shopify.orders} prev={pw.shopify.orders} /></td>
                   <td>{fmtNum(m.shopify.orders)}</td>
                 </tr>
                 <tr>
-                  <td>AOV</td>
+                  <Tip label="AOV" />
                   <td>{fmtKr(w.shopify.aov)}</td>
                   <td><DeltaBadge curr={w.shopify.aov} prev={pw.shopify.aov} /></td>
                   <td>{fmtKr(m.shopify.aov)}</td>
                 </tr>
                 <tr>
-                  <td>MRR (Subscriptions)</td>
+                  <Tip label="MRR (Subscriptions)" />
                   <td>{fmtKr(w.shopify.sub_revenue)} <span className="pres-dim">({w.shopify.sub_orders})</span></td>
                   <td><DeltaBadge curr={w.shopify.sub_revenue} prev={pw.shopify.sub_revenue} /></td>
                   <td>{fmtKr(m.shopify.sub_revenue)} <span className="pres-dim">({m.shopify.sub_orders})</span></td>
                 </tr>
                 <tr>
-                  <td>New Customers</td>
+                  <Tip label="New Customers" />
                   <td>{w.shopify.new_customers} <span className="pres-dim">({w.shopify.new_pct}%)</span></td>
                   <td><DeltaBadge curr={w.shopify.new_customers} prev={pw.shopify.new_customers} /></td>
                   <td>{m.shopify.new_customers} <span className="pres-dim">({m.shopify.new_pct}%)</span></td>
                 </tr>
                 <tr>
-                  <td>Returning Customers</td>
+                  <Tip label="Returning Customers" />
                   <td>{w.shopify.returning_customers}</td>
                   <td><DeltaBadge curr={w.shopify.returning_customers} prev={pw.shopify.returning_customers} /></td>
                   <td>{m.shopify.returning_customers}</td>
                 </tr>
                 {data.analytics.week.sessions > 0 && (
                   <tr>
-                    <td>CR (Session→Purchase)</td>
+                    <Tip label="CR (Session→Purchase)" />
                     <td className="pres-val-accent">{data.analytics.week.cr}%</td>
                     <td><DeltaBadge curr={data.analytics.week.cr} prev={data.analytics.prev_week.cr} /></td>
                     <td className="pres-val-accent">{data.analytics.mtd.cr}%</td>
@@ -284,49 +313,49 @@ export default function WeeklyReportPage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Spend</td>
+                    <Tip label="Spend" />
                     <td>{fmtKr(w.meta.spend)}</td>
                     <td><DeltaBadge curr={w.meta.spend} prev={pw.meta.spend} inverse /></td>
                     <td>{fmtKr(m.meta.spend)}</td>
                   </tr>
                   <tr>
-                    <td>Blended ROAS</td>
+                    <Tip label="Blended ROAS" />
                     <td className="pres-val-accent">{w.blended_roas}x</td>
                     <td><DeltaBadge curr={w.blended_roas} prev={pw.blended_roas} /></td>
                     <td className="pres-val-accent">{m.blended_roas}x</td>
                   </tr>
                   <tr>
-                    <td>Meta ROAS</td>
+                    <Tip label="Meta ROAS" />
                     <td>{w.meta.roas}x</td>
                     <td><DeltaBadge curr={w.meta.roas} prev={pw.meta.roas} /></td>
                     <td>{m.meta.roas}x</td>
                   </tr>
                   <tr>
-                    <td>Blended CAC <span className="pres-dim">(spend/orders)</span></td>
+                    <Tip label="Blended CAC" />
                     <td className={w.blended_cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(w.blended_cac)}</td>
                     <td><DeltaBadge curr={w.blended_cac} prev={pw.blended_cac} inverse /></td>
                     <td className={m.blended_cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(m.blended_cac)}</td>
                   </tr>
                   <tr>
-                    <td>Meta CAC <span className="pres-dim">(spend/purch)</span></td>
+                    <Tip label="Meta CAC" />
                     <td className="pres-dim">{fmtKr(w.cac)}</td>
                     <td><DeltaBadge curr={w.cac} prev={pw.cac} inverse /></td>
                     <td className="pres-dim">{fmtKr(m.cac)}</td>
                   </tr>
                   <tr>
-                    <td>Purchases</td>
+                    <Tip label="Purchases" />
                     <td>{w.meta.purchases}</td>
                     <td><DeltaBadge curr={w.meta.purchases} prev={pw.meta.purchases} /></td>
                     <td>{m.meta.purchases}</td>
                   </tr>
                   <tr>
-                    <td>CTR</td>
+                    <Tip label="CTR" />
                     <td>{w.meta.ctr}%</td>
                     <td><DeltaBadge curr={w.meta.ctr} prev={pw.meta.ctr} /></td>
                     <td>{m.meta.ctr}%</td>
                   </tr>
                   <tr>
-                    <td>CR (Click→Purchase)</td>
+                    <Tip label="CR (Click→Purchase)" />
                     <td>{w.cr}%</td>
                     <td><DeltaBadge curr={w.cr} prev={pw.cr} /></td>
                     <td>{m.cr}%</td>
@@ -373,31 +402,31 @@ export default function WeeklyReportPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td>AOV</td>
+                  <Tip label="AOV" />
                   <td>{fmtKr(w.shopify.aov)}</td>
                   <td><DeltaBadge curr={w.shopify.aov} prev={pw.shopify.aov} /></td>
                   <td>{fmtKr(m.shopify.aov)}</td>
                 </tr>
                 <tr>
-                  <td>Gross Margin</td>
+                  <Tip label="Gross Margin" />
                   <td>{fmtKr(weekMargin)} <span className="pres-dim">({weekMarginPct}%)</span></td>
                   <td><DeltaBadge curr={weekMargin} prev={pw.shopify.aov - COGS_PER_BOX} /></td>
                   <td>{fmtKr(mtdMargin)} <span className="pres-dim">({mtdMarginPct}%)</span></td>
                 </tr>
                 <tr>
-                  <td>Break-even CAC</td>
+                  <Tip label="Break-even CAC" />
                   <td className="pres-val-accent">{fmtKr(weekBECAC)}</td>
                   <td />
                   <td className="pres-val-accent">{fmtKr(mtdBECAC)}</td>
                 </tr>
                 <tr>
-                  <td>Blended CAC</td>
+                  <Tip label="Blended CAC " />
                   <td className={w.blended_cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(w.blended_cac)}</td>
                   <td><DeltaBadge curr={w.blended_cac} prev={pw.blended_cac} inverse /></td>
                   <td className={m.blended_cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(m.blended_cac)}</td>
                 </tr>
                 <tr>
-                  <td>CAC vs Break-even</td>
+                  <Tip label="CAC vs Break-even" />
                   <td className={w.blended_cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>
                     {w.blended_cac > 0 ? `${w.blended_cac > weekBECAC ? "+" : ""}${fmtKr(w.blended_cac - weekBECAC)}` : "—"}
                   </td>
@@ -407,7 +436,7 @@ export default function WeeklyReportPage() {
                   </td>
                 </tr>
                 <tr>
-                  <td>Meta CAC <span className="pres-dim">(for reference)</span></td>
+                  <Tip label="Meta CAC (for reference)" />
                   <td className="pres-dim">{fmtKr(w.cac)}</td>
                   <td><DeltaBadge curr={w.cac} prev={pw.cac} inverse /></td>
                   <td className="pres-dim">{fmtKr(m.cac)}</td>
