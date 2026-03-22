@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 const COGS_PER_BOX = 94;
-const SLIDE_TITLES = ["Scoreboard", "Paid Performance", "Economics", "Creative Health"];
+const SLIDE_TITLES = ["Scoreboard", "Paid Performance", "Economics"];
 const TOTAL_SLIDES = SLIDE_TITLES.length;
 
 // --- Types ---
@@ -212,7 +212,7 @@ export default function WeeklyReportPage() {
   const w = data.week;
   const pw = data.prev_week;
   const m = data.mtd;
-  const ch = data.creative_health;
+  // creative_health data available but not shown in current slide set
 
   const weekMargin = w.shopify.aov - COGS_PER_BOX;
   const mtdMargin = m.shopify.aov - COGS_PER_BOX;
@@ -287,14 +287,21 @@ export default function WeeklyReportPage() {
                   <td><DeltaBadge curr={w.shopify.returning_customers} prev={pw.shopify.returning_customers} /></td>
                   <td>{m.shopify.returning_customers}</td>
                 </tr>
-                {data.analytics.week.sessions > 0 && (
-                  <tr>
-                    <Tip label="CR (Session→Purchase)" />
-                    <td className="pres-val-accent">{data.analytics.week.cr}%</td>
-                    <td><DeltaBadge curr={data.analytics.week.cr} prev={data.analytics.prev_week.cr} /></td>
-                    <td className="pres-val-accent">{data.analytics.mtd.cr}%</td>
-                  </tr>
-                )}
+                <tr>
+                  <Tip label={data.analytics.week.sessions > 0 ? "CR (Session→Purchase)" : "CR (Click→Purchase)"} />
+                  <td className="pres-val-accent">
+                    {data.analytics.week.sessions > 0 ? `${data.analytics.week.cr}%` : `${w.cr}%`}
+                  </td>
+                  <td>
+                    <DeltaBadge
+                      curr={data.analytics.week.sessions > 0 ? data.analytics.week.cr : w.cr}
+                      prev={data.analytics.prev_week.sessions > 0 ? data.analytics.prev_week.cr : pw.cr}
+                    />
+                  </td>
+                  <td className="pres-val-accent">
+                    {data.analytics.mtd.sessions > 0 ? `${data.analytics.mtd.cr}%` : `${m.cr}%`}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -453,81 +460,7 @@ export default function WeeklyReportPage() {
           <InsightBox insight={getEconomicsInsight(w, weekBECAC)} />
         </div>
 
-        {/* === SLIDE 4: CREATIVE HEALTH === */}
-        <div className="pres-slide">
-          <h1 className="pres-slide-title">Creative Health</h1>
-          <p className="pres-slide-subtitle">Performance changes vs last week</p>
-          <div className="pres-health-grid">
-            {/* Fatigue alerts */}
-            <div className="pres-health-section">
-              <h3 className="pres-sub-heading">
-                {ch.fatigued.length > 0 ? "⚠ Fatigue Signals" : "No Fatigue Detected"}
-              </h3>
-              {ch.fatigued.length > 0 ? (
-                <div className="pres-health-cards">
-                  {ch.fatigued.map((c, i) => (
-                    <div key={i} className="pres-health-card pres-health-card-warn">
-                      <span className="pres-health-card-name">{cleanAdName(c.name)}</span>
-                      <div className="pres-health-card-stats">
-                        {c.ctr_drop_pct > 0 && <span>CTR <span className="pres-val-red">↓{c.ctr_drop_pct}%</span></span>}
-                        {c.roas_drop_pct > 0 && <span>ROAS <span className="pres-val-red">↓{c.roas_drop_pct}%</span></span>}
-                        <span className="pres-dim">{fmtKr(c.spend)} spent</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="pres-dim">All creatives maintaining performance.</p>
-              )}
-            </div>
-
-            {/* Scaling winners */}
-            <div className="pres-health-section">
-              <h3 className="pres-sub-heading">
-                {ch.scaling.length > 0 ? "Scaling Winners" : "No Scaling Creatives"}
-              </h3>
-              {ch.scaling.length > 0 ? (
-                <div className="pres-health-cards">
-                  {ch.scaling.map((c, i) => (
-                    <div key={i} className="pres-health-card pres-health-card-ok">
-                      <span className="pres-health-card-name">{cleanAdName(c.name)}</span>
-                      <div className="pres-health-card-stats">
-                        <span>Spend <span className="pres-val-green">↑{c.spend_increase_pct}%</span></span>
-                        <span>ROAS <span className="pres-val-accent">{c.roas}x</span></span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="pres-dim">No creatives scaling significantly this week.</p>
-              )}
-            </div>
-
-            {/* Spend concentration */}
-            <div className="pres-health-section">
-              <h3 className="pres-sub-heading">Spend Concentration</h3>
-              {ch.top_spend_share.length > 0 ? (
-                <div className="pres-spend-bars">
-                  {ch.top_spend_share.map((c, i) => (
-                    <div key={i} className="pres-spend-bar-row">
-                      <span className="pres-spend-bar-name">{cleanAdName(c.name)}</span>
-                      <div className="pres-spend-bar-track">
-                        <div
-                          className={`pres-spend-bar-fill ${c.share_pct > 50 ? "pres-spend-bar-warn" : ""}`}
-                          style={{ width: `${c.share_pct}%` }}
-                        />
-                      </div>
-                      <span className="pres-spend-bar-pct">{c.share_pct}%</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="pres-dim">No spend data available.</p>
-              )}
-            </div>
-          </div>
-          <InsightBox insight={getCreativeHealthInsight(ch)} />
-        </div>
+        {/* Creative Health slide removed */}
       </div>
 
       {/* Navigation */}

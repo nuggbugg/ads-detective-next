@@ -133,6 +133,9 @@ export const gather = action({
       }
     }
 
+    // Build a set of customer emails that have ordered before this month
+    // by checking orders_count from the Shopify customer object
+    // Shopify includes customer.orders_count which is the TOTAL lifetime orders
     const processOrders = (orders: Array<Record<string, unknown>>) => {
       const online = orders.filter((o) => {
         const ot = ((o.tags as string) || "").split(",").map((t) => t.trim().toLowerCase());
@@ -142,6 +145,9 @@ export const gather = action({
 
       let rev = 0, boxes = 0, subRev = 0, subOrders = 0, otRev = 0, otOrders = 0;
       let newCustomers = 0, returningCustomers = 0, newRevenue = 0, returningRevenue = 0;
+
+      // Track unique customer emails to detect returning within this dataset
+      const seenEmails = new Set<string>();
 
       for (const o of online) {
         const r = parseFloat((o.total_price as string) || "0");
@@ -155,18 +161,27 @@ export const gather = action({
           li.some((i) => i.selling_plan_allocation != null);
         if (isSub) { subRev += r; subOrders++; } else { otRev += r; otOrders++; }
 
-        // New vs Returning
+        // New vs Returning — use orders_count from Shopify customer object
+        // orders_count = total lifetime orders for this customer
         const customerOrdersCount = (o as any).customer?.orders_count;
-        if (customerOrdersCount !== undefined && customerOrdersCount !== null) {
-          if (customerOrdersCount <= 1) {
-            newCustomers++;
-            newRevenue += r;
-          } else {
-            returningCustomers++;
-            returningRevenue += r;
-          }
+        const customerEmail = ((o as any).customer?.email || "").toLowerCase();
+
+        let isReturning = false;
+        if (customerOrdersCount !== undefined && customerOrdersCount > 1) {
+          // Shopify says this customer has placed more than 1 order ever
+          isReturning = true;
+        } else if (customerEmail && seenEmails.has(customerEmail)) {
+          // Same email appeared earlier in our dataset = repeat buyer
+          isReturning = true;
+        }
+
+        if (customerEmail) seenEmails.add(customerEmail);
+
+        if (isReturning) {
+          returningCustomers++;
+          returningRevenue += r;
         } else {
-          newCustomers++; // No customer data = likely new
+          newCustomers++;
           newRevenue += r;
         }
       }
