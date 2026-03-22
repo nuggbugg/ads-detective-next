@@ -378,11 +378,17 @@ export const gather = action({
             headers: { "X-Shopify-Access-Token": tokens.shopifyToken, "Content-Type": "application/json" },
             body: JSON.stringify(gqlBody),
           });
+          const rawText = await res.text();
           if (!res.ok) {
-            console.log("ShopifyQL HTTP error:", res.status);
+            console.log("ShopifyQL HTTP error:", res.status, rawText.slice(0, 500));
             return emptyAnalytics;
           }
-          const data = await res.json();
+          const data = JSON.parse(rawText);
+          // Log errors if any
+          if (data.errors) {
+            console.log("ShopifyQL GQL errors:", JSON.stringify(data.errors).slice(0, 500));
+            return emptyAnalytics;
+          }
           console.log("ShopifyQL response type:", data?.data?.shopifyqlQuery?.__typename);
 
           // Handle TableResponse

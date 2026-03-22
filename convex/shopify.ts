@@ -7,7 +7,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 const SHOPIFY_STORE = "mobynutrition.myshopify.com";
 const SHOPIFY_CLIENT_ID = "1eeb3ae5b341187536602380c950b1c1";
 const SHOPIFY_API_VERSION = "2026-01";
-const SHOPIFY_SCOPES = "read_orders,read_products";
+const SHOPIFY_SCOPES = "read_orders,read_products,read_analytics";
 const SALES_GOAL = 500;
 
 // Manual B2B adjustments (orders outside Shopify)
