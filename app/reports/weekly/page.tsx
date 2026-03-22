@@ -17,9 +17,9 @@ interface ShopifyData {
 interface MetaData {
   spend: number; impressions: number; clicks: number; purchases: number; pv: number; leads: number; ctr: number; roas: number;
 }
-interface Creative { name: string; spend: number; roas: number; purchases: number; ctr: number; }
+interface Creative { name: string; spend: number; roas: number; purchases: number; ctr: number; image_url?: string | null; }
 interface PeriodData {
-  shopify: ShopifyData; meta: MetaData; blended_roas: number; cac: number; top_creatives: Creative[];
+  shopify: ShopifyData; meta: MetaData; blended_roas: number; cac: number; cr: number; top_creatives: Creative[];
 }
 interface FunnelStage { spend: number; roas: number; impressions: number; purchases: number; pct: number; }
 interface CreativeHealth {
@@ -351,15 +351,28 @@ export default function WeeklyReportPage() {
                     <td><DeltaBadge curr={w.meta.ctr} prev={pw.meta.ctr} /></td>
                     <td>{m.meta.ctr}%</td>
                   </tr>
+                  <tr>
+                    <td>CR (Click→Purchase)</td>
+                    <td>{w.cr}%</td>
+                    <td><DeltaBadge curr={w.cr} prev={pw.cr} /></td>
+                    <td>{m.cr}%</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
             <div className="pres-creatives-col">
-              <h3 className="pres-sub-heading">Top Creatives This Week</h3>
+              <h3 className="pres-sub-heading">Top Creatives (MTD by ROAS)</h3>
               <div className="pres-creative-list">
-                {w.top_creatives.slice(0, 3).map((c, i) => (
+                {m.top_creatives.slice(0, 3).map((c, i) => (
                   <div key={i} className="pres-creative-item">
-                    <span className="pres-creative-rank">#{i + 1}</span>
+                    {c.image_url ? (
+                      <div className="pres-creative-thumb">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={c.image_url} alt={c.name} />
+                      </div>
+                    ) : (
+                      <span className="pres-creative-rank">#{i + 1}</span>
+                    )}
                     <div className="pres-creative-info">
                       <span className="pres-creative-name">{cleanAdName(c.name)}</span>
                       <span className="pres-creative-stats">

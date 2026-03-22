@@ -4419,6 +4419,13 @@ a { color: inherit; text-decoration: none; }
   font-size: 24px; font-weight: 800; color: var(--accent);
   min-width: 36px;
 }
+.pres-creative-thumb {
+  width: 56px; height: 56px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+  background: #222;
+}
+.pres-creative-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+}
 .pres-creative-info { display: flex; flex-direction: column; gap: 4px; }
 .pres-creative-name {
   font-size: 15px; font-weight: 600; color: #ddd;

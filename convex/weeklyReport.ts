@@ -25,7 +25,7 @@ export const _getTokens = internalQuery({
   },
 });
 
-// Query creatives for funnel stage breakdown
+// Query creatives for funnel stage breakdown + image URLs for top creatives
 export const _getFunnelData = internalQuery({
   args: {},
   handler: async (ctx) => {
@@ -52,7 +52,19 @@ export const _getFunnelData = internalQuery({
         pct: totalSpend > 0 ? Math.round((v.spend / totalSpend) * 100) : 0,
       };
     }
-    return result;
+
+    // Build ad_name → image URL map
+    const imageMap: Record<string, string> = {};
+    for (const c of creatives) {
+      let url = c.image_url || c.thumbnail_url || null;
+      if (c.image_storage_id) {
+        const storageUrl = await ctx.storage.getUrl(c.image_storage_id);
+        if (storageUrl) url = storageUrl;
+      }
+      if (url && c.ad_name) imageMap[c.ad_name] = url;
+    }
+
+    return { stages: result, imageMap };
   },
 });
 
@@ -301,8 +313,14 @@ export const gather = action({
       share_pct: totalWeekSpend > 0 ? Math.round((a.spend / totalWeekSpend) * 100) : 0,
     }));
 
-    // Funnel stage breakdown from DB
-    const funnelStages = await ctx.runQuery(internal.weeklyReport._getFunnelData);
+    // Funnel stage breakdown + image map from DB
+    const funnelData: any = await ctx.runQuery(internal.weeklyReport._getFunnelData);
+    const funnelStages = funnelData.stages || {};
+    const imageMap: Record<string, string> = funnelData.imageMap || {};
+
+    // Attach image URLs to top creatives
+    const attachImages = (ads: AdData[]) =>
+      ads.map((a) => ({ ...a, image_url: imageMap[a.name] || null }));
 
     const blendedFn = (rev: number, spend: number) => spend > 0 ? Math.round((rev / spend) * 100) / 100 : 0;
     const cacFn = (spend: number, purchases: number) => purchases > 0 ? Math.round(spend / purchases) : 0;
@@ -315,21 +333,24 @@ export const gather = action({
         meta: metaWeek,
         blended_roas: blendedFn(weekShopify.revenue, metaWeek.spend),
         cac: cacFn(metaWeek.spend, metaWeek.purchases),
-        top_creatives: weekAds,
+        cr: metaWeek.clicks > 0 ? Math.round((metaWeek.purchases / metaWeek.clicks) * 10000) / 100 : 0,
+        top_creatives: attachImages(weekAds),
       },
       prev_week: {
         shopify: prevWeekShopify,
         meta: metaPrevWeek,
         blended_roas: blendedFn(prevWeekShopify.revenue, metaPrevWeek.spend),
         cac: cacFn(metaPrevWeek.spend, metaPrevWeek.purchases),
-        top_creatives: prevWeekAds,
+        cr: metaPrevWeek.clicks > 0 ? Math.round((metaPrevWeek.purchases / metaPrevWeek.clicks) * 10000) / 100 : 0,
+        top_creatives: attachImages(prevWeekAds),
       },
       mtd: {
         shopify: mtdShopify,
         meta: metaMtd,
         blended_roas: blendedFn(mtdShopify.revenue, metaMtd.spend),
         cac: cacFn(metaMtd.spend, metaMtd.purchases),
-        top_creatives: mtdAds,
+        cr: metaMtd.clicks > 0 ? Math.round((metaMtd.purchases / metaMtd.clicks) * 10000) / 100 : 0,
+        top_creatives: attachImages(mtdAds),
       },
       funnel_stages: funnelStages,
       creative_health: {
