@@ -116,36 +116,36 @@ function Tip({ label, customTip }: { label: string; customTip?: string }) {
 function getScoreboardInsight(w: PeriodData, pw: PeriodData): Insight {
   const revDelta = delta(w.shopify.revenue, pw.shopify.revenue);
   if (revDelta.dir === "down" && revDelta.pct > 15)
-    return { status: "warning", text: `Revenue down ${revDelta.pct}% vs last week. Check ad performance and site conversion rate.` };
+    return { status: "warning", text: `Omsättningen har gått ner ${revDelta.pct}% jämfört med förra veckan. Kolla om annonserna presterar sämre eller om sajten konverterar dåligt.` };
   if (revDelta.dir === "up" && revDelta.pct > 15)
-    return { status: "healthy", text: `Revenue up ${revDelta.pct}% vs last week. Momentum is strong.` };
+    return { status: "healthy", text: `Omsättningen har ökat ${revDelta.pct}% jämfört med förra veckan — bra momentum! Fortsätt skala det som funkar.` };
   if (w.shopify.new_pct < 30)
-    return { status: "warning", text: `Only ${w.shopify.new_pct}% new customers — acquisition may be slowing. Most revenue from repeat buyers.` };
+    return { status: "warning", text: `Bara ${w.shopify.new_pct}% nya kunder — de flesta köpen kommer från återköpare. Bra retention men acquisition kan behöva pushas.` };
   if (w.shopify.new_pct > 70)
-    return { status: "healthy", text: `${w.shopify.new_pct}% new customers — strong acquisition. Monitor retention for long-term health.` };
-  return { status: "healthy", text: "Revenue and order volume are stable week-over-week." };
+    return { status: "healthy", text: `${w.shopify.new_pct}% nya kunder — stark kundanskaffning! Håll koll på att de kommer tillbaka och blir prenumeranter.` };
+  return { status: "healthy", text: "Omsättning och ordervolym är stabila jämfört med förra veckan. Inga röda flaggor." };
 }
 
 function getPaidInsight(w: PeriodData, pw: PeriodData): Insight {
   if (w.blended_roas < 1.0)
-    return { status: "critical", text: `Blended ROAS ${w.blended_roas}x — losing money on paid acquisition. Pause underperformers or raise AOV.` };
+    return { status: "critical", text: `Blended ROAS ${w.blended_roas}x — vi förlorar pengar på annonsering just nu. Varje krona vi lägger på ads ger mindre än 1 kr tillbaka. Pausa underpresterande annonser eller höj AOV.` };
   if (w.blended_roas < 2.0)
-    return { status: "warning", text: `Blended ROAS ${w.blended_roas}x — marginal profitability. Optimize creatives and targeting.` };
+    return { status: "warning", text: `Blended ROAS ${w.blended_roas}x — vi är lönsamma men marginalen är tight. För varje 100 kr i ad spend genererar vi ${Math.round(w.blended_roas * 100)} kr i revenue. Fokusera på att optimera creatives och testa nya vinklar.` };
   const cacDelta = delta(w.cac, pw.cac);
   if (cacDelta.dir === "up" && cacDelta.pct > 20)
-    return { status: "warning", text: `CAC increased ${cacDelta.pct}% vs last week (${fmtKr(pw.cac)} → ${fmtKr(w.cac)}). Watch for audience fatigue.` };
-  return { status: "healthy", text: `Blended ROAS ${w.blended_roas}x — profitable acquisition. Keep scaling what works.` };
+    return { status: "warning", text: `Meta CAC har ökat ${cacDelta.pct}% sedan förra veckan (${fmtKr(pw.cac)} → ${fmtKr(w.cac)}). Kan vara tecken på audience fatigue — testa nya målgrupper eller creatives.` };
+  return { status: "healthy", text: `Blended ROAS ${w.blended_roas}x — lönsam kundanskaffning! Vi tjänar ${Math.round((w.blended_roas - 1) * 100)} kr per 100 kr i ad spend. Fortsätt skala det som funkar.` };
 }
 
 function getEconomicsInsight(w: PeriodData, breakEvenCAC: number): Insight {
   const bCAC = w.blended_cac;
   const diff = bCAC - breakEvenCAC;
-  if (bCAC === 0) return { status: "healthy", text: "Not enough order data to calculate blended CAC." };
+  if (bCAC === 0) return { status: "healthy", text: "Inte tillräckligt med orderdata för att beräkna CAC." };
   if (diff > 100)
-    return { status: "critical", text: `Blended CAC (${fmtKr(bCAC)}) exceeds break-even (${fmtKr(breakEvenCAC)}) by ${fmtKr(diff)}. Urgent: improve creatives or raise AOV.` };
+    return { status: "critical", text: `Blended CAC (${fmtKr(bCAC)}) är ${fmtKr(diff)} ÖVER break-even (${fmtKr(breakEvenCAC)}). Det betyder att vi förlorar ${fmtKr(diff)} per ny kund på första köpet. Akut: förbättra creatives, sänk CPC, eller höj AOV.` };
   if (diff > 0)
-    return { status: "warning", text: `Blended CAC (${fmtKr(bCAC)}) is ${fmtKr(diff)} above break-even (${fmtKr(breakEvenCAC)}). Optimize to reach profitability.` };
-  return { status: "healthy", text: `Blended CAC (${fmtKr(bCAC)}) is ${fmtKr(Math.abs(diff))} below break-even. Unit economics are healthy!` };
+    return { status: "warning", text: `Blended CAC (${fmtKr(bCAC)}) är ${fmtKr(diff)} över break-even (${fmtKr(breakEvenCAC)}). Vi går alltså back ${fmtKr(diff)} per ny kund — men om de kommer tillbaka och prenumererar tjänar vi in det. Jobba på att sänka CAC genom bättre creatives.` };
+  return { status: "healthy", text: `Blended CAC (${fmtKr(bCAC)}) är ${fmtKr(Math.abs(diff))} under break-even (${fmtKr(breakEvenCAC)}). Vi tjänar alltså pengar redan på första köpet — det är riktigt bra! Varje ny kund ger oss ${fmtKr(Math.abs(diff))} i marginal efter ad spend.` };
 }
 
 function getCreativeHealthInsight(health: CreativeHealth): Insight {
