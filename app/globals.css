@@ -4490,4 +4490,108 @@ a { color: inherit; text-decoration: none; }
   .pres-topbar { padding: 12px 16px; }
   .pres-dot-label { display: none; }
   .pres-dot { width: 10px; height: 10px; padding: 0; border-radius: 50%; }
+  .pres-health-grid { flex-direction: column; }
+  .pres-funnel-grid { flex-direction: column; }
+  .pres-bench-col { min-width: unset; }
+}
+
+/* --- Delta badges --- */
+.pres-delta {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 13px; font-weight: 600; padding: 2px 8px;
+  border-radius: 100px; white-space: nowrap;
+}
+.pres-delta-good { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+.pres-delta-bad { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+.pres-delta-flat { color: #666; }
+
+/* --- Insight box --- */
+.pres-insight {
+  display: flex; align-items: center; gap: 12px; margin-top: 24px;
+  padding: 14px 20px; border-radius: 12px; font-size: 14px;
+  max-width: 800px; line-height: 1.5;
+}
+.pres-insight-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.pres-insight-healthy { background: rgba(74, 222, 128, 0.08); color: #a3e6b8; border: 1px solid rgba(74, 222, 128, 0.15); }
+.pres-insight-healthy .pres-insight-dot { background: #4ade80; }
+.pres-insight-warning { background: rgba(250, 204, 21, 0.08); color: #fde68a; border: 1px solid rgba(250, 204, 21, 0.15); }
+.pres-insight-warning .pres-insight-dot { background: #facc15; }
+.pres-insight-critical { background: rgba(248, 113, 113, 0.08); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.15); }
+.pres-insight-critical .pres-insight-dot { background: #f87171; }
+
+/* --- Funnel stage badges --- */
+.pres-stage-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
+}
+.pres-stage-tof { background: rgba(96, 165, 250, 0.15); color: #93c5fd; }
+.pres-stage-mof { background: rgba(250, 204, 21, 0.15); color: #fde68a; }
+.pres-stage-bof { background: rgba(74, 222, 128, 0.15); color: #86efac; }
+
+/* --- Funnel grid layout --- */
+.pres-funnel-grid {
+  display: flex; gap: 40px; width: 100%; max-width: 1000px; align-items: flex-start;
+}
+.pres-funnel-grid .pres-table-wrap { flex: 1; }
+
+/* --- Benchmark bars --- */
+.pres-bench-col { min-width: 300px; }
+.pres-bench { margin-bottom: 20px; }
+.pres-bench-label { font-size: 13px; color: #888; font-weight: 500; margin-bottom: 6px; }
+.pres-bench-track {
+  position: relative; height: 8px; background: #222; border-radius: 4px; overflow: visible;
+}
+.pres-bench-range {
+  position: absolute; top: 0; height: 100%; background: rgba(255,255,255,0.08);
+  border-radius: 4px; border: 1px dashed #444;
+}
+.pres-bench-marker {
+  position: absolute; top: -4px; width: 16px; height: 16px; border-radius: 50%;
+  transform: translateX(-50%); border: 2px solid #111;
+}
+.pres-bench-ok { background: #4ade80; }
+.pres-bench-off { background: #f87171; }
+.pres-bench-values {
+  display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px;
+}
+
+/* --- Creative health --- */
+.pres-health-grid {
+  display: flex; gap: 32px; width: 100%; max-width: 1100px; align-items: flex-start;
+}
+.pres-health-section { flex: 1; min-width: 0; }
+.pres-health-cards { display: flex; flex-direction: column; gap: 8px; }
+.pres-health-card {
+  padding: 12px 16px; border-radius: 10px; border: 1px solid #222;
+}
+.pres-health-card-warn { border-color: rgba(248, 113, 113, 0.2); background: rgba(248, 113, 113, 0.04); }
+.pres-health-card-ok { border-color: rgba(74, 222, 128, 0.2); background: rgba(74, 222, 128, 0.04); }
+.pres-health-card-name {
+  font-size: 14px; font-weight: 600; color: #ddd; display: block; margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pres-health-card-stats {
+  display: flex; gap: 12px; font-size: 13px; color: #888;
+}
+
+/* --- Spend concentration bars --- */
+.pres-spend-bars { display: flex; flex-direction: column; gap: 10px; }
+.pres-spend-bar-row { display: flex; align-items: center; gap: 10px; }
+.pres-spend-bar-name {
+  font-size: 13px; color: #aaa; min-width: 120px; max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pres-spend-bar-track {
+  flex: 1; height: 8px; background: #222; border-radius: 4px; overflow: hidden;
+}
+.pres-spend-bar-fill {
+  height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s;
+}
+.pres-spend-bar-warn { background: #facc15; }
+.pres-spend-bar-pct { font-size: 13px; color: #888; min-width: 36px; text-align: right; }
+
+.pres-empty-msg {
+  padding: 40px; text-align: center; color: #555; font-size: 16px;
 }
