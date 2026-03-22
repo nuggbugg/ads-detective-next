@@ -19,7 +19,7 @@ interface MetaData {
 }
 interface Creative { name: string; spend: number; roas: number; purchases: number; ctr: number; image_url?: string | null; }
 interface PeriodData {
-  shopify: ShopifyData; meta: MetaData; blended_roas: number; cac: number; cr: number; top_creatives: Creative[];
+  shopify: ShopifyData; meta: MetaData; blended_roas: number; cac: number; blended_cac: number; cr: number; top_creatives: Creative[];
 }
 interface FunnelStage { spend: number; roas: number; impressions: number; purchases: number; pct: number; }
 interface CreativeHealth {
@@ -114,13 +114,14 @@ function getFunnelInsight(stages: Record<string, FunnelStage>): Insight {
 }
 
 function getEconomicsInsight(w: PeriodData, breakEvenCAC: number): Insight {
-  const diff = w.cac - breakEvenCAC;
-  if (w.cac === 0) return { status: "healthy", text: "Not enough purchase data to calculate CAC." };
+  const bCAC = w.blended_cac;
+  const diff = bCAC - breakEvenCAC;
+  if (bCAC === 0) return { status: "healthy", text: "Not enough order data to calculate blended CAC." };
   if (diff > 100)
-    return { status: "critical", text: `CAC (${fmtKr(w.cac)}) exceeds break-even (${fmtKr(breakEvenCAC)}) by ${fmtKr(diff)}. Urgent: improve creatives or raise AOV.` };
+    return { status: "critical", text: `Blended CAC (${fmtKr(bCAC)}) exceeds break-even (${fmtKr(breakEvenCAC)}) by ${fmtKr(diff)}. Urgent: improve creatives or raise AOV.` };
   if (diff > 0)
-    return { status: "warning", text: `CAC (${fmtKr(w.cac)}) is ${fmtKr(diff)} above break-even (${fmtKr(breakEvenCAC)}). Optimize to reach profitability.` };
-  return { status: "healthy", text: `CAC (${fmtKr(w.cac)}) is ${fmtKr(Math.abs(diff))} below break-even. Unit economics are healthy.` };
+    return { status: "warning", text: `Blended CAC (${fmtKr(bCAC)}) is ${fmtKr(diff)} above break-even (${fmtKr(breakEvenCAC)}). Optimize to reach profitability.` };
+  return { status: "healthy", text: `Blended CAC (${fmtKr(bCAC)}) is ${fmtKr(Math.abs(diff))} below break-even. Unit economics are healthy!` };
 }
 
 function getCreativeHealthInsight(health: CreativeHealth): Insight {
@@ -334,10 +335,16 @@ export default function WeeklyReportPage() {
                     <td>{m.meta.roas}x</td>
                   </tr>
                   <tr>
-                    <td>CAC</td>
-                    <td className={w.cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(w.cac)}</td>
+                    <td>Blended CAC <span className="pres-dim">(spend/orders)</span></td>
+                    <td className={w.blended_cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(w.blended_cac)}</td>
+                    <td><DeltaBadge curr={w.blended_cac} prev={pw.blended_cac} inverse /></td>
+                    <td className={m.blended_cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(m.blended_cac)}</td>
+                  </tr>
+                  <tr>
+                    <td>Meta CAC <span className="pres-dim">(spend/purch)</span></td>
+                    <td className="pres-dim">{fmtKr(w.cac)}</td>
                     <td><DeltaBadge curr={w.cac} prev={pw.cac} inverse /></td>
-                    <td>{fmtKr(m.cac)}</td>
+                    <td className="pres-dim">{fmtKr(m.cac)}</td>
                   </tr>
                   <tr>
                     <td>Purchases</td>
@@ -463,20 +470,26 @@ export default function WeeklyReportPage() {
                   <td className="pres-val-accent">{fmtKr(mtdBECAC)}</td>
                 </tr>
                 <tr>
-                  <td>Actual CAC</td>
-                  <td className={w.cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(w.cac)}</td>
-                  <td><DeltaBadge curr={w.cac} prev={pw.cac} inverse /></td>
-                  <td className={m.cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(m.cac)}</td>
+                  <td>Blended CAC</td>
+                  <td className={w.blended_cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(w.blended_cac)}</td>
+                  <td><DeltaBadge curr={w.blended_cac} prev={pw.blended_cac} inverse /></td>
+                  <td className={m.blended_cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>{fmtKr(m.blended_cac)}</td>
                 </tr>
                 <tr>
                   <td>CAC vs Break-even</td>
-                  <td className={w.cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>
-                    {w.cac > 0 ? `${w.cac > weekBECAC ? "+" : ""}${fmtKr(w.cac - weekBECAC)}` : "—"}
+                  <td className={w.blended_cac > weekBECAC ? "pres-val-red" : "pres-val-green"}>
+                    {w.blended_cac > 0 ? `${w.blended_cac > weekBECAC ? "+" : ""}${fmtKr(w.blended_cac - weekBECAC)}` : "—"}
                   </td>
                   <td />
-                  <td className={m.cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>
-                    {m.cac > 0 ? `${m.cac > mtdBECAC ? "+" : ""}${fmtKr(m.cac - mtdBECAC)}` : "—"}
+                  <td className={m.blended_cac > mtdBECAC ? "pres-val-red" : "pres-val-green"}>
+                    {m.blended_cac > 0 ? `${m.blended_cac > mtdBECAC ? "+" : ""}${fmtKr(m.blended_cac - mtdBECAC)}` : "—"}
                   </td>
+                </tr>
+                <tr>
+                  <td>Meta CAC <span className="pres-dim">(for reference)</span></td>
+                  <td className="pres-dim">{fmtKr(w.cac)}</td>
+                  <td><DeltaBadge curr={w.cac} prev={pw.cac} inverse /></td>
+                  <td className="pres-dim">{fmtKr(m.cac)}</td>
                 </tr>
                 <tr>
                   <td>Blended ROAS</td>
