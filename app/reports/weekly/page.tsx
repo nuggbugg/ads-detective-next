@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 const COGS_PER_BOX = 94;
-const SLIDE_TITLES = ["Scoreboard", "Paid Performance", "Funnel Stages", "Economics", "Creative Health"];
+const SLIDE_TITLES = ["Scoreboard", "Paid Performance", "Economics", "Creative Health"];
 const TOTAL_SLIDES = SLIDE_TITLES.length;
 
 // --- Types ---
@@ -27,9 +27,11 @@ interface CreativeHealth {
   scaling: Array<{ name: string; spend_increase_pct: number; roas: number; spend: number }>;
   top_spend_share: Array<{ name: string; spend: number; share_pct: number }>;
 }
+interface AnalyticsData { sessions: number; atc: number; checkouts: number; cr: number; }
 interface ReportData {
   month: string; generated_at: string; error?: string;
   week: PeriodData; prev_week: PeriodData; mtd: PeriodData;
+  analytics: { week: AnalyticsData; prev_week: AnalyticsData; mtd: AnalyticsData };
   funnel_stages: Record<string, FunnelStage>;
   creative_health: CreativeHealth;
 }
@@ -99,20 +101,6 @@ function getPaidInsight(w: PeriodData, pw: PeriodData): Insight {
   return { status: "healthy", text: `Blended ROAS ${w.blended_roas}x — profitable acquisition. Keep scaling what works.` };
 }
 
-function getFunnelInsight(stages: Record<string, FunnelStage>): Insight {
-  const tof = stages["TOF"];
-  const bof = stages["BOF"];
-  if (tof && tof.pct > 80)
-    return { status: "warning", text: `${tof.pct}% of spend is TOF (benchmark: 60-70%). Consider adding more MOF/BOF to convert warm audiences.` };
-  if (tof && tof.pct < 40)
-    return { status: "warning", text: `Only ${tof.pct}% on TOF (benchmark: 60-70%). Pipeline may dry up — invest more in awareness.` };
-  if (bof && bof.roas > 3)
-    return { status: "healthy", text: `BOF ROAS ${bof.roas}x is strong (benchmark: 3-10x). Retargeting is converting well.` };
-  if (tof && tof.pct >= 55 && tof.pct <= 75)
-    return { status: "healthy", text: `Funnel spend distribution looks healthy. TOF ${tof.pct}% is within the 60-70% benchmark.` };
-  return { status: "healthy", text: "Funnel allocation is reasonable. Monitor stage ROAS for optimization opportunities." };
-}
-
 function getEconomicsInsight(w: PeriodData, breakEvenCAC: number): Insight {
   const bCAC = w.blended_cac;
   const diff = bCAC - breakEvenCAC;
@@ -134,34 +122,6 @@ function getCreativeHealthInsight(health: CreativeHealth): Insight {
   if (health.scaling.length > 0)
     return { status: "healthy", text: `${health.scaling.length} creative(s) scaling well — spend increasing with stable ROAS.` };
   return { status: "healthy", text: "Creative portfolio is stable. No fatigue signals detected." };
-}
-
-// --- BENCHMARKS ---
-const FUNNEL_BENCHMARKS: Record<string, { spend_pct: [number, number]; roas: [number, number] }> = {
-  TOF: { spend_pct: [60, 70], roas: [0.5, 1.5] },
-  MOF: { spend_pct: [15, 25], roas: [1.0, 3.0] },
-  BOF: { spend_pct: [10, 20], roas: [3.0, 10.0] },
-};
-
-function BenchmarkBar({ value, benchLow, benchHigh, label }: { value: number; benchLow: number; benchHigh: number; label: string }) {
-  const max = Math.max(value, benchHigh) * 1.2;
-  const valW = (value / max) * 100;
-  const lowW = (benchLow / max) * 100;
-  const highW = (benchHigh / max) * 100;
-  const inRange = value >= benchLow && value <= benchHigh;
-  return (
-    <div className="pres-bench">
-      <div className="pres-bench-label">{label}</div>
-      <div className="pres-bench-track">
-        <div className="pres-bench-range" style={{ left: `${lowW}%`, width: `${highW - lowW}%` }} />
-        <div className={`pres-bench-marker ${inRange ? "pres-bench-ok" : "pres-bench-off"}`} style={{ left: `${valW}%` }} />
-      </div>
-      <div className="pres-bench-values">
-        <span className={inRange ? "pres-val-green" : "pres-val-red"}>{value}%</span>
-        <span className="pres-dim">benchmark {benchLow}-{benchHigh}%</span>
-      </div>
-    </div>
-  );
 }
 
 // === MAIN COMPONENT ===
@@ -223,7 +183,6 @@ export default function WeeklyReportPage() {
   const w = data.week;
   const pw = data.prev_week;
   const m = data.mtd;
-  const fs = data.funnel_stages;
   const ch = data.creative_health;
 
   const weekMargin = w.shopify.aov - COGS_PER_BOX;
@@ -299,6 +258,14 @@ export default function WeeklyReportPage() {
                   <td><DeltaBadge curr={w.shopify.returning_customers} prev={pw.shopify.returning_customers} /></td>
                   <td>{m.shopify.returning_customers}</td>
                 </tr>
+                {data.analytics.week.sessions > 0 && (
+                  <tr>
+                    <td>CR (Session→Purchase)</td>
+                    <td className="pres-val-accent">{data.analytics.week.cr}%</td>
+                    <td><DeltaBadge curr={data.analytics.week.cr} prev={data.analytics.prev_week.cr} /></td>
+                    <td className="pres-val-accent">{data.analytics.mtd.cr}%</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -395,53 +362,7 @@ export default function WeeklyReportPage() {
           <InsightBox insight={getPaidInsight(w, pw)} />
         </div>
 
-        {/* === SLIDE 3: FUNNEL STAGES === */}
-        <div className="pres-slide">
-          <h1 className="pres-slide-title">Funnel Stage Breakdown</h1>
-          <p className="pres-slide-subtitle">Spend allocation & ROAS by funnel stage (from synced creatives)</p>
-          {Object.keys(fs).length > 0 ? (
-            <div className="pres-funnel-grid">
-              <div className="pres-table-wrap">
-                <table className="pres-table">
-                  <thead>
-                    <tr><th>Stage</th><th>Spend</th><th>Share</th><th>ROAS</th><th>Purchases</th></tr>
-                  </thead>
-                  <tbody>
-                    {["TOF", "MOF", "BOF"].map((stage) => {
-                      const s = fs[stage];
-                      if (!s) return null;
-                      return (
-                        <tr key={stage}>
-                          <td><span className={`pres-stage-badge pres-stage-${stage.toLowerCase()}`}>{stage}</span></td>
-                          <td>{fmtKr(s.spend)}</td>
-                          <td>{s.pct}%</td>
-                          <td className={s.roas >= 1 ? "pres-val-green" : "pres-val-red"}>{s.roas}x</td>
-                          <td>{s.purchases}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="pres-bench-col">
-                <h3 className="pres-sub-heading">vs Industry Benchmarks</h3>
-                {["TOF", "MOF", "BOF"].map((stage) => {
-                  const s = fs[stage];
-                  const b = FUNNEL_BENCHMARKS[stage];
-                  if (!s || !b) return null;
-                  return <BenchmarkBar key={stage} value={s.pct} benchLow={b.spend_pct[0]} benchHigh={b.spend_pct[1]} label={`${stage} Spend`} />;
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="pres-empty-msg">
-              <p>No funnel stage data available. Run AI analysis on your creatives to classify them into TOF/MOF/BOF.</p>
-            </div>
-          )}
-          <InsightBox insight={getFunnelInsight(fs)} />
-        </div>
-
-        {/* === SLIDE 4: ECONOMICS === */}
+        {/* === SLIDE 3: ECONOMICS === */}
         <div className="pres-slide">
           <h1 className="pres-slide-title">Economics</h1>
           <p className="pres-slide-subtitle">Unit economics &middot; COGS {fmtKr(COGS_PER_BOX)}/box</p>
@@ -503,7 +424,7 @@ export default function WeeklyReportPage() {
           <InsightBox insight={getEconomicsInsight(w, weekBECAC)} />
         </div>
 
-        {/* === SLIDE 5: CREATIVE HEALTH === */}
+        {/* === SLIDE 4: CREATIVE HEALTH === */}
         <div className="pres-slide">
           <h1 className="pres-slide-title">Creative Health</h1>
           <p className="pres-slide-subtitle">Performance changes vs last week</p>

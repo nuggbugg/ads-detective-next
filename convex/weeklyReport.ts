@@ -329,6 +329,49 @@ export const gather = action({
         image_url: imageMap[a.name.replace(/[^\x20-\x7E]/g, "_")] || null,
       }));
 
+    // === SHOPIFY ANALYTICS: Sessions & Funnel via ShopifyQL ===
+    type AnalyticsData = { sessions: number; atc: number; checkouts: number; cr: number };
+    const emptyAnalytics: AnalyticsData = { sessions: 0, atc: 0, checkouts: 0, cr: 0 };
+    let analyticsWeek = { ...emptyAnalytics };
+    let analyticsPrevWeek = { ...emptyAnalytics };
+    let analyticsMtd = { ...emptyAnalytics };
+
+    if (tokens.shopifyToken) {
+      const fetchAnalytics = async (since: string, until: string, orderCount: number): Promise<AnalyticsData> => {
+        try {
+          const shopifyQL = `FROM sessions SINCE ${since} UNTIL ${until} SHOW sum(sessions) AS sessions, sum(addedToCartSessions) AS atc, sum(convertedSessions) AS checkouts`;
+          const gqlQuery = JSON.stringify({
+            query: `{ shopifyqlQuery(query: "${shopifyQL.replace(/"/g, '\\"')}") { __typename ... on TableResponse { tableData { rowData columns { name } } } } }`,
+          });
+          const gqlUrl = `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`;
+          const res = await fetch(gqlUrl, {
+            method: "POST",
+            headers: { "X-Shopify-Access-Token": tokens.shopifyToken, "Content-Type": "application/json" },
+            body: gqlQuery,
+          });
+          if (!res.ok) return emptyAnalytics;
+          const data = await res.json();
+          const table = data?.data?.shopifyqlQuery?.tableData;
+          if (table?.rowData?.length > 0) {
+            const cols: string[] = (table.columns || []).map((c: any) => c.name);
+            const row = table.rowData[0];
+            const sessions = parseInt(row[cols.indexOf("sessions")]) || 0;
+            const atc = parseInt(row[cols.indexOf("atc")]) || 0;
+            const checkouts = parseInt(row[cols.indexOf("checkouts")]) || 0;
+            const cr = sessions > 0 ? Math.round((orderCount / sessions) * 10000) / 100 : 0;
+            return { sessions, atc, checkouts, cr };
+          }
+        } catch { /* ignore analytics errors */ }
+        return emptyAnalytics;
+      };
+
+      [analyticsWeek, analyticsPrevWeek, analyticsMtd] = await Promise.all([
+        fetchAnalytics(fmtDate(weekAgo), fmtDate(now), weekShopify.orders),
+        fetchAnalytics(fmtDate(prevWeekStart), fmtDate(prevWeekEnd), prevWeekShopify.orders),
+        fetchAnalytics(fmtDate(monthStart), fmtDate(now), mtdShopify.orders),
+      ]);
+    }
+
     const blendedFn = (rev: number, spend: number) => spend > 0 ? Math.round((rev / spend) * 100) / 100 : 0;
     const cacFn = (spend: number, purchases: number) => purchases > 0 ? Math.round(spend / purchases) : 0;
 
@@ -361,6 +404,11 @@ export const gather = action({
         blended_cac: mtdShopify.orders > 0 ? Math.round(metaMtd.spend / mtdShopify.orders) : 0,
         cr: metaMtd.clicks > 0 ? Math.round((metaMtd.purchases / metaMtd.clicks) * 10000) / 100 : 0,
         top_creatives: attachImages(mtdAds),
+      },
+      analytics: {
+        week: analyticsWeek,
+        prev_week: analyticsPrevWeek,
+        mtd: analyticsMtd,
       },
       funnel_stages: funnelStages,
       creative_health: {
