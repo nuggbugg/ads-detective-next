@@ -236,9 +236,32 @@ export const gather = action({
     });
     const mtdOrders = allOrders.filter((o) => new Date(o.created_at as string) >= monthStart);
 
+    // Debug: log order counts and filtering
+    console.log(`Total orders fetched: ${allOrders.length}`);
+    console.log(`This week orders (${fmtDate(weekAgo)} to ${fmtDate(weekEndInclusive)}): ${thisWeekOrders.length}`);
+
+    // Log B2B filtering for this week
+    const weekB2B = thisWeekOrders.filter((o) => {
+      const ot = ((o.tags as string) || "").split(",").map((t) => t.trim().toLowerCase());
+      const ct = ((o as any).customer?.tags || "").split(",").map((t: string) => t.trim().toLowerCase());
+      return ot.includes("b2b") || ct.includes("b2b");
+    });
+    console.log(`This week B2B orders filtered out: ${weekB2B.length}`);
+
+    // Log total_price for first few orders to verify
+    for (const o of thisWeekOrders.slice(0, 3)) {
+      console.log(`  Order ${(o as any).order_number}: total_price=${o.total_price}, tags="${o.tags}", financial_status=${(o as any).financial_status}, created=${(o.created_at as string).slice(0,10)}`);
+    }
+
+    // Check total revenue including B2B
+    const allWeekRev = thisWeekOrders.reduce((s, o) => s + parseFloat((o.total_price as string) || "0"), 0);
+    console.log(`This week ALL orders revenue (incl B2B): ${Math.round(allWeekRev)} kr (${thisWeekOrders.length} orders)`);
+
     const weekShopify = processOrders(thisWeekOrders);
     const prevWeekShopify = processOrders(prevWeekOrders);
     const mtdShopify = processOrders(mtdOrders);
+
+    console.log(`This week ONLINE revenue: ${weekShopify.revenue} kr (${weekShopify.orders} orders)`);
 
     // === META ===
     const parseIns = (ins: any) => {
@@ -382,18 +405,15 @@ export const gather = action({
       const fetchAnalytics = async (since: string, until: string, orderCount: number): Promise<AnalyticsData> => {
         try {
           const shopifyQL = `FROM sessions SINCE ${since} UNTIL ${until} SHOW sum(sessions) AS sessions, sum(addedToCartSessions) AS atc, sum(convertedSessions) AS checkouts`;
+          // Shopify 2026-01: ShopifyqlTableData has `columns` + `rows` (JSON)
           const gqlBody = {
             query: `{
               shopifyqlQuery(query: "${shopifyQL.replace(/"/g, '\\"')}") {
                 __typename
-                ... on TableResponse {
-                  tableData {
-                    rowData
-                    columns { name dataType }
-                  }
-                }
-                ... on PolarisVizResponse {
-                  data { key data { key value } }
+                parseErrors
+                tableData {
+                  columns { name dataType }
+                  rows
                 }
               }
             }`,
@@ -410,30 +430,44 @@ export const gather = action({
             return emptyAnalytics;
           }
           const data = JSON.parse(rawText);
-          // Log errors if any
           if (data.errors) {
             console.log("ShopifyQL GQL errors:", JSON.stringify(data.errors).slice(0, 500));
             return emptyAnalytics;
           }
-          console.log("ShopifyQL response type:", data?.data?.shopifyqlQuery?.__typename);
+          console.log("ShopifyQL response:", JSON.stringify(data?.data?.shopifyqlQuery).slice(0, 500));
 
-          // Handle TableResponse
+          // Handle tableData with `rows` (JSON) and `columns`
           const table = data?.data?.shopifyqlQuery?.tableData;
-          if (table?.rowData?.length > 0) {
+          if (table) {
             const cols: string[] = (table.columns || []).map((c: any) => c.name);
-            const row = table.rowData[0];
-            console.log("ShopifyQL columns:", cols, "row:", row);
-            const sessions = parseInt(row[cols.indexOf("sessions")]) || 0;
-            const atc = parseInt(row[cols.indexOf("atc")]) || 0;
-            const checkouts = parseInt(row[cols.indexOf("checkouts")]) || 0;
-            const cr = sessions > 0 ? Math.round((orderCount / sessions) * 10000) / 100 : 0;
-            return { sessions, atc, checkouts, cr };
+            // `rows` is a JSON blob — could be array of arrays or array of objects
+            const rows = typeof table.rows === "string" ? JSON.parse(table.rows) : table.rows;
+            console.log("ShopifyQL columns:", cols, "rows type:", typeof rows, "rows:", JSON.stringify(rows).slice(0, 300));
+
+            if (Array.isArray(rows) && rows.length > 0) {
+              const row = rows[0];
+              let sessions = 0, atc = 0, checkouts = 0;
+
+              if (Array.isArray(row)) {
+                // Array of arrays: row[colIndex]
+                sessions = parseInt(row[cols.indexOf("sessions")]) || 0;
+                atc = parseInt(row[cols.indexOf("atc")]) || 0;
+                checkouts = parseInt(row[cols.indexOf("checkouts")]) || 0;
+              } else if (typeof row === "object") {
+                // Array of objects: row.fieldName
+                sessions = parseInt(row.sessions || row["sessions"]) || 0;
+                atc = parseInt(row.atc || row["atc"]) || 0;
+                checkouts = parseInt(row.checkouts || row["checkouts"]) || 0;
+              }
+
+              const cr = sessions > 0 ? Math.round((orderCount / sessions) * 10000) / 100 : 0;
+              return { sessions, atc, checkouts, cr };
+            }
           }
 
-          // Handle PolarisVizResponse (some Shopify versions return this)
+          // Fallback: try legacy PolarisVizResponse format
           const vizData = data?.data?.shopifyqlQuery?.data;
           if (vizData) {
-            console.log("ShopifyQL PolarisViz data:", JSON.stringify(vizData).slice(0, 200));
             let sessions = 0, atc = 0, checkouts = 0;
             for (const series of vizData) {
               const key = (series.key || "").toLowerCase();
