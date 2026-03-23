@@ -79,12 +79,35 @@ export const gather = action({
     if (!tokens.shopifyToken && !tokens.metaToken) return { error: "No tokens configured" };
 
     const now = new Date();
-    const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
-    const prevWeekStart = new Date(now); prevWeekStart.setDate(prevWeekStart.getDate() - 14);
-    const prevWeekEnd = new Date(now); prevWeekEnd.setDate(prevWeekEnd.getDate() - 7);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const fmtDate = (d: Date) => d.toISOString().split("T")[0];
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+    // Calendar weeks: Mon-Sun
+    // "This week" = the most recently completed Mon-Sun week
+    // Find last Monday: go back to most recent Monday
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+    // Last completed week: previous Monday to Sunday
+    const thisWeekEnd = new Date(now);
+    thisWeekEnd.setDate(thisWeekEnd.getDate() - daysSinceMonday); // This Monday
+    thisWeekEnd.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(thisWeekEnd);
+    weekAgo.setDate(weekAgo.getDate() - 7); // Previous Monday = start of last week
+    // thisWeekEnd = this Monday 00:00 = end of last week (exclusive)
+
+    const prevWeekStart = new Date(weekAgo);
+    prevWeekStart.setDate(prevWeekStart.getDate() - 7); // Two Mondays ago
+    const prevWeekEnd = new Date(weekAgo); // Previous Monday = end of prev-prev week
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Inclusive end dates (Sunday) for API calls
+    const weekEndInclusive = new Date(thisWeekEnd.getTime() - 86400000); // Sunday
+    const prevWeekEndInclusive = new Date(prevWeekEnd.getTime() - 86400000); // prev Sunday
+
+    console.log(`Report week: ${fmtDate(weekAgo)} to ${fmtDate(weekEndInclusive)} (Mon-Sun)`);
+    console.log(`Prev week: ${fmtDate(prevWeekStart)} to ${fmtDate(prevWeekEndInclusive)}`);
 
     // === SHOPIFY: Fetch orders from prev week start (14d ago) through now ===
     let allOrders: Array<Record<string, unknown>> = [];
@@ -203,7 +226,10 @@ export const gather = action({
       };
     };
 
-    const thisWeekOrders = allOrders.filter((o) => new Date(o.created_at as string) >= weekAgo);
+    const thisWeekOrders = allOrders.filter((o) => {
+      const d = new Date(o.created_at as string);
+      return d >= weekAgo && d < thisWeekEnd;
+    });
     const prevWeekOrders = allOrders.filter((o) => {
       const d = new Date(o.created_at as string);
       return d >= prevWeekStart && d < prevWeekEnd;
@@ -279,11 +305,11 @@ export const gather = action({
 
       // Fetch all 3 periods + ad-level for current + prev week in parallel
       const [wIns, pwIns, mIns, wAdsData, pwAdsData, mAdsData] = await Promise.all([
-        fetchIns(fmtDate(weekAgo), fmtDate(now)),
-        fetchIns(fmtDate(prevWeekStart), fmtDate(prevWeekEnd)),
+        fetchIns(fmtDate(weekAgo), fmtDate(weekEndInclusive)),
+        fetchIns(fmtDate(prevWeekStart), fmtDate(prevWeekEndInclusive)),
         fetchIns(fmtDate(monthStart), fmtDate(now)),
-        fetchTopAds(fmtDate(weekAgo), fmtDate(now)),
-        fetchTopAds(fmtDate(prevWeekStart), fmtDate(prevWeekEnd)),
+        fetchTopAds(fmtDate(weekAgo), fmtDate(weekEndInclusive)),
+        fetchTopAds(fmtDate(prevWeekStart), fmtDate(prevWeekEndInclusive)),
         fetchTopAds(fmtDate(monthStart), fmtDate(now)),
       ]);
 
@@ -429,8 +455,8 @@ export const gather = action({
       };
 
       [analyticsWeek, analyticsPrevWeek, analyticsMtd] = await Promise.all([
-        fetchAnalytics(fmtDate(weekAgo), fmtDate(now), weekShopify.orders),
-        fetchAnalytics(fmtDate(prevWeekStart), fmtDate(prevWeekEnd), prevWeekShopify.orders),
+        fetchAnalytics(fmtDate(weekAgo), fmtDate(weekEndInclusive), weekShopify.orders),
+        fetchAnalytics(fmtDate(prevWeekStart), fmtDate(prevWeekEndInclusive), prevWeekShopify.orders),
         fetchAnalytics(fmtDate(monthStart), fmtDate(now), mtdShopify.orders),
       ]);
     }
@@ -438,8 +464,14 @@ export const gather = action({
     const blendedFn = (rev: number, spend: number) => spend > 0 ? Math.round((rev / spend) * 100) / 100 : 0;
     const cacFn = (spend: number, purchases: number) => purchases > 0 ? Math.round(spend / purchases) : 0;
 
+    // Week label: "Mar 16 – 22, 2026"
+    const weekSunday = new Date(thisWeekEnd.getTime() - 86400000);
+    const weekMonthShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const weekLabel = `${weekMonthShort[weekAgo.getMonth()]} ${weekAgo.getDate()} – ${weekSunday.getDate()}, ${weekAgo.getFullYear()}`;
+
     return {
       month: `${monthNames[now.getMonth()]} ${now.getFullYear()}`,
+      week_label: weekLabel,
       generated_at: now.toISOString(),
       week: {
         shopify: weekShopify,

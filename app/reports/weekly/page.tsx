@@ -29,7 +29,7 @@ interface CreativeHealth {
 }
 interface AnalyticsData { sessions: number; atc: number; checkouts: number; cr: number; }
 interface ReportData {
-  month: string; generated_at: string; error?: string;
+  month: string; week_label?: string; generated_at: string; error?: string;
   week: PeriodData; prev_week: PeriodData; mtd: PeriodData;
   analytics: { week: AnalyticsData; prev_week: AnalyticsData; mtd: AnalyticsData };
   funnel_stages: Record<string, FunnelStage>;
@@ -233,7 +233,7 @@ export default function WeeklyReportPage() {
       <div className="pres-topbar">
         <div className="pres-topbar-left">
           <span className="pres-brand">MOBY</span>
-          <span className="pres-month">{data.month} — Weekly Report</span>
+          <span className="pres-month">{data.week_label || data.month} — Weekly Report</span>
         </div>
         <div className="pres-topbar-right">
           <span className="pres-slide-counter">{slide + 1} / {TOTAL_SLIDES}</span>
