@@ -320,9 +320,10 @@ export const gather = action({
           .map((ad: any) => {
             const spend = parseFloat(ad.spend) || 0;
             let purchases = 0;
-            for (const a of ad.actions || []) {
-              if (a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase") purchases += parseInt(a.value) || 0;
-            }
+            const purchaseAction = (ad.actions || []).find(
+              (a: any) => a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase"
+            );
+            if (purchaseAction) purchases = parseInt(purchaseAction.value) || 0;
             const roas = ad.purchase_roas?.[0]?.value ? parseFloat(ad.purchase_roas[0].value) : 0;
             return { id: ad.ad_id as string, name: ad.ad_name as string, spend: Math.round(spend), roas: Math.round(roas * 100) / 100, purchases, ctr: Math.round((parseFloat(ad.ctr) || 0) * 100) / 100 };
           })
