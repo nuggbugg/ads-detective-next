@@ -17,7 +17,7 @@ interface ShopifyData {
 interface MetaData {
   spend: number; impressions: number; clicks: number; purchases: number; pv: number; leads: number; ctr: number; roas: number;
 }
-interface Creative { name: string; spend: number; roas: number; purchases: number; ctr: number; image_url?: string | null; }
+interface Creative { id?: string; name: string; spend: number; roas: number; purchases: number; ctr: number; image_url?: string | null; }
 interface PeriodData {
   shopify: ShopifyData; meta: MetaData; blended_roas: number; cac: number; blended_cac: number; cr: number; top_creatives: Creative[];
 }
@@ -381,7 +381,7 @@ export default function WeeklyReportPage() {
               <h3 className="pres-sub-heading">Top Creatives (MTD by ROAS)</h3>
               <div className="pres-creative-list">
                 {m.top_creatives.slice(0, 3).map((c, i) => (
-                  <div key={i} className="pres-creative-item">
+                  <div key={c.id || i} className="pres-creative-item">
                     {c.image_url ? (
                       <div className="pres-creative-thumb">
                         {/* eslint-disable-next-line @next/next/no-img-element */}

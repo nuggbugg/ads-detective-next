@@ -61,10 +61,13 @@ export const _getFunnelData = internalQuery({
         const storageUrl = await ctx.storage.getUrl(c.image_storage_id);
         if (storageUrl) url = storageUrl;
       }
+      if (url && c.ad_id) {
+        imageMap[c.ad_id] = url;
+      }
+      // Also keep ad_name key as fallback
       if (url && c.ad_name) {
-        // Replace non-ASCII chars with underscore for valid Convex field names
         const safeKey = c.ad_name.replace(/[^\x20-\x7E]/g, "_");
-        imageMap[safeKey] = url;
+        if (!imageMap[safeKey]) imageMap[safeKey] = url;
       }
     }
 
@@ -284,7 +287,7 @@ export const gather = action({
       };
     };
 
-    type AdData = { name: string; spend: number; roas: number; purchases: number; ctr: number };
+    type AdData = { id: string; name: string; spend: number; roas: number; purchases: number; ctr: number };
 
     let metaWeek = parseIns(null);
     let metaPrevWeek = parseIns(null);
@@ -308,7 +311,7 @@ export const gather = action({
 
       const fetchTopAds = async (since: string, until: string): Promise<AdData[]> => {
         const tr = JSON.stringify({ since, until });
-        const fields = "ad_name,spend,impressions,clicks,ctr,actions,action_values,purchase_roas";
+        const fields = "ad_id,ad_name,spend,impressions,clicks,ctr,actions,action_values,purchase_roas";
         const url = `${META_API_BASE}/act_${aid}/insights?fields=${fields}&time_range=${encodeURIComponent(tr)}&level=ad&limit=50&sort=spend_descending`;
         const r = await fetch(url, { headers: { Authorization: `Bearer ${tk}` } });
         if (!r.ok) return [];
@@ -321,7 +324,7 @@ export const gather = action({
               if (a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase") purchases += parseInt(a.value) || 0;
             }
             const roas = ad.purchase_roas?.[0]?.value ? parseFloat(ad.purchase_roas[0].value) : 0;
-            return { name: ad.ad_name as string, spend: Math.round(spend), roas: Math.round(roas * 100) / 100, purchases, ctr: Math.round((parseFloat(ad.ctr) || 0) * 100) / 100 };
+            return { id: ad.ad_id as string, name: ad.ad_name as string, spend: Math.round(spend), roas: Math.round(roas * 100) / 100, purchases, ctr: Math.round((parseFloat(ad.ctr) || 0) * 100) / 100 };
           })
           .filter((c: AdData) => c.spend > 0);
       };
@@ -349,9 +352,9 @@ export const gather = action({
 
     // Creative fatigue detection
     const adMap = new Map<string, { curr: AdData; prev: AdData }>();
-    for (const ad of weekAds) adMap.set(ad.name, { curr: ad, prev: { name: ad.name, spend: 0, roas: 0, purchases: 0, ctr: 0 } });
+    for (const ad of weekAds) adMap.set(ad.id, { curr: ad, prev: { id: ad.id, name: ad.name, spend: 0, roas: 0, purchases: 0, ctr: 0 } });
     for (const ad of prevWeekAds) {
-      const existing = adMap.get(ad.name);
+      const existing = adMap.get(ad.id);
       if (existing) existing.prev = ad;
     }
 
@@ -391,7 +394,7 @@ export const gather = action({
     const attachImages = (ads: AdData[]) =>
       ads.map((a) => ({
         ...a,
-        image_url: imageMap[a.name.replace(/[^\x20-\x7E]/g, "_")] || null,
+        image_url: imageMap[a.id] || imageMap[a.name.replace(/[^\x20-\x7E]/g, "_")] || null,
       }));
 
     // === SHOPIFY ANALYTICS: Sessions & Funnel via ShopifyQL ===
