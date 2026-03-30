@@ -31,8 +31,10 @@ async function autoAnalyze(
 export const _syncAccountImpl = internalAction({
   args: {
     account_id: v.id("ad_accounts"),
+    since: v.optional(v.string()),
+    until: v.optional(v.string()),
   },
-  handler: async (ctx, { account_id }): Promise<{ synced: number; account: string }> => {
+  handler: async (ctx, { account_id, since: customSince, until: customUntil }): Promise<{ synced: number; account: string }> => {
     // Get account
     const account = await ctx.runQuery(internal.accounts._getById, { id: account_id });
     if (!account) throw new Error("Account not found");
@@ -41,15 +43,20 @@ export const _syncAccountImpl = internalAction({
     const token = await ctx.runQuery(internal.settings.get, { key: "meta_access_token" });
     if (!token) throw new Error("Meta access token not configured");
 
-    // Get date range — use 90-day baseline for first sync, configured window otherwise
-    const isFirstSync = !account.last_synced_at;
-    const dateRangeDays = await ctx.runQuery(internal.settings.get, { key: "date_range_days" });
-    const days = isFirstSync ? 90 : parseInt(dateRangeDays || "30");
-
-    const until = new Date().toISOString().split("T")[0];
-    const sinceDate = new Date();
-    sinceDate.setDate(sinceDate.getDate() - days);
-    const since = sinceDate.toISOString().split("T")[0];
+    let since: string, until: string;
+    if (customSince && customUntil) {
+      since = customSince;
+      until = customUntil;
+    } else {
+      // Get date range — use 90-day baseline for first sync, configured window otherwise
+      const isFirstSync = !account.last_synced_at;
+      const dateRangeDays = await ctx.runQuery(internal.settings.get, { key: "date_range_days" });
+      const days = isFirstSync ? 90 : parseInt(dateRangeDays || "30");
+      until = new Date().toISOString().split("T")[0];
+      const sinceDate = new Date();
+      sinceDate.setDate(sinceDate.getDate() - days);
+      since = sinceDate.toISOString().split("T")[0];
+    }
 
     // Fetch insights + ads in parallel
     const [insights, ads] = await Promise.all([
@@ -165,11 +172,13 @@ export const _syncAccountImpl = internalAction({
 export const syncAccount = action({
   args: {
     account_id: v.id("ad_accounts"),
+    since: v.optional(v.string()),
+    until: v.optional(v.string()),
   },
-  handler: async (ctx, { account_id }): Promise<{ synced: number; account: string }> => {
+  handler: async (ctx, { account_id, since, until }): Promise<{ synced: number; account: string }> => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("Unauthenticated");
-    return await ctx.runAction(internal.sync._syncAccountImpl, { account_id });
+    return await ctx.runAction(internal.sync._syncAccountImpl, { account_id, since, until });
   },
 });
 

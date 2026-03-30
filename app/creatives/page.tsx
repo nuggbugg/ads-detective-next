@@ -10,11 +10,28 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { Tip } from "@/components/ui/Tooltip";
 
+function getDatePreset(preset: string): { since: string; until: string } {
+  const now = new Date();
+  const until = now.toISOString().split("T")[0];
+  if (preset === "7d") {
+    const d = new Date(); d.setDate(d.getDate() - 7);
+    return { since: d.toISOString().split("T")[0], until };
+  }
+  if (preset === "mtd") {
+    return { since: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`, until };
+  }
+  // default: 30d
+  const d = new Date(); d.setDate(d.getDate() - 30);
+  return { since: d.toISOString().split("T")[0], until };
+}
+
 export default function CreativesPage() {
   const filterOptions = useQuery(api.creatives.getFilterOptions);
   const settings = useQuery(api.settings.getAll);
+  const accounts = useQuery(api.accounts.list);
   const analyzeOne = useAction(api.analysis.analyzeOne);
   const analyzeAll = useAction(api.analysis.analyzeUnanalyzed);
+  const syncAccount = useAction(api.sync.syncAccount);
   const toast = useToast();
   const fmt = useCurrencyFormatter();
 
@@ -56,6 +73,10 @@ export default function CreativesPage() {
   const [sortBy, setSortBy] = useState<string>("spend");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [groupBy, setGroupBy] = useState<string>("");
+  const [datePreset, setDatePreset] = useState("30d");
+  const [customSince, setCustomSince] = useState("");
+  const [customUntil, setCustomUntil] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const selectedCreative = creatives?.find((c) => c._id === selectedId);
   const goal = typeof settings?.campaign_goal === "string" ? settings.campaign_goal : "roas";
@@ -85,6 +106,27 @@ export default function CreativesPage() {
     const av = Number(rawA ?? 0); const bv = Number(rawB ?? 0);
     return sortDir === "asc" ? av - bv : bv - av;
   });
+
+  const handleDateSync = async (preset?: string) => {
+    const activeAccounts = accounts?.filter((a) => a.is_active);
+    if (!activeAccounts?.length) { toast.error("No active accounts"); return; }
+    setSyncing(true);
+    try {
+      const p = preset || datePreset;
+      const range = p === "custom"
+        ? { since: customSince, until: customUntil }
+        : getDatePreset(p);
+      if (!range.since || !range.until) { toast.error("Select date range"); setSyncing(false); return; }
+      for (const acc of activeAccounts) {
+        await syncAccount({ account_id: acc._id, since: range.since, until: range.until });
+      }
+      toast.success(`Synced ${range.since} → ${range.until}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleAnalyze = async (id: Id<"creatives">) => {
     setAnalyzing(id);
@@ -234,6 +276,33 @@ export default function CreativesPage() {
               <option key={a} value={a}>{a}</option>
             ))}
           </select>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto" }}>
+            <select
+              className="input input-sm"
+              value={datePreset}
+              onChange={(e) => {
+                setDatePreset(e.target.value);
+                if (e.target.value !== "custom") handleDateSync(e.target.value);
+              }}
+              disabled={syncing}
+            >
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="mtd">MTD</option>
+              <option value="custom">Custom</option>
+            </select>
+            {datePreset === "custom" && (
+              <>
+                <input type="date" className="input input-sm" value={customSince} onChange={(e) => setCustomSince(e.target.value)} disabled={syncing} />
+                <span style={{ opacity: 0.5 }}>→</span>
+                <input type="date" className="input input-sm" value={customUntil} onChange={(e) => setCustomUntil(e.target.value)} disabled={syncing} />
+                <button className="btn btn-sm btn-secondary" onClick={() => handleDateSync()} disabled={syncing || !customSince || !customUntil}>
+                  {syncing ? "Syncing..." : "Apply"}
+                </button>
+              </>
+            )}
+            {syncing && datePreset !== "custom" && <span style={{ fontSize: 12, opacity: 0.6 }}>Syncing...</span>}
+          </div>
         </div>
       )}
 
