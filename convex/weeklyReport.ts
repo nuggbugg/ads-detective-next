@@ -271,13 +271,22 @@ export const gather = action({
       if (!ins) return { spend: 0, impressions: 0, clicks: 0, purchases: 0, pv: 0, leads: 0, ctr: 0, roas: 0 };
       const spend = parseFloat(ins.spend) || 0;
       let purchases = 0, pv = 0, leads = 0;
-      for (const a of ins.actions || []) {
-        if (a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase") purchases += parseInt(a.value) || 0;
-        if (a.action_type === "lead" || a.action_type === "offsite_conversion.fb_pixel_lead") leads += parseInt(a.value) || 0;
-      }
-      for (const a of ins.action_values || []) {
-        if (a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase") pv += parseFloat(a.value) || 0;
-      }
+      // Use .find() to avoid double-counting — Meta often returns the same conversion
+      // under both "purchase" and "offsite_conversion.fb_pixel_purchase" action types
+      const actions = ins.actions || [];
+      const actionValues = ins.action_values || [];
+      const purchaseAction = actions.find(
+        (a: any) => a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase"
+      );
+      if (purchaseAction) purchases = parseInt(purchaseAction.value) || 0;
+      const leadAction = actions.find(
+        (a: any) => a.action_type === "lead" || a.action_type === "offsite_conversion.fb_pixel_lead" || a.action_type === "onsite_conversion.lead_grouped"
+      );
+      if (leadAction) leads = parseInt(leadAction.value) || 0;
+      const pvAction = actionValues.find(
+        (a: any) => a.action_type === "purchase" || a.action_type === "offsite_conversion.fb_pixel_purchase"
+      );
+      if (pvAction) pv = parseFloat(pvAction.value) || 0;
       const roas = ins.purchase_roas?.[0]?.value ? parseFloat(ins.purchase_roas[0].value) : spend > 0 && pv > 0 ? pv / spend : 0;
       return {
         spend: Math.round(spend), impressions: parseInt(ins.impressions) || 0,
