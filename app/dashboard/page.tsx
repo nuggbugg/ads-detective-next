@@ -336,12 +336,12 @@ export default function DashboardPage() {
                     </div>
                     <div className="dash-metric-value">
                       {m.all_spend > 0
-                        ? ((data.sales_goal.total_revenue || 0) / m.all_spend).toFixed(2) + "x"
+                        ? ((data.sales_goal.online_revenue || 0) / m.all_spend).toFixed(2) + "x"
                         : "—"}
                     </div>
                     <div className="dash-metric-sub">
-                      <Tip label="Revenue / All Ad Spend">
-                        {fmt(data.sales_goal.total_revenue || 0)} rev / {fmt(m.all_spend)} spend
+                      <Tip label="Online Revenue / All Ad Spend">
+                        {fmt(data.sales_goal.online_revenue || 0)} rev / {fmt(m.all_spend)} spend
                       </Tip>
                     </div>
                   </div>
