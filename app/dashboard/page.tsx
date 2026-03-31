@@ -364,7 +364,8 @@ export default function DashboardPage() {
                 const subOrders = sg.subscription_orders || 0;
                 const oneOrders = sg.onetime_orders || 0;
                 const totalRev = sg.total_revenue || 0;
-                const subPct = totalRev > 0 ? Math.round((subRev / totalRev) * 100) : 0;
+                const onlineRev = sg.online_revenue || 0;
+                const subPct = onlineRev > 0 ? Math.round((subRev / onlineRev) * 100) : 0;
                 const onePct = 100 - subPct;
                 const fmtKr = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k kr` : `${Math.round(n)} kr`;
 
