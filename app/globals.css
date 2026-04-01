@@ -712,12 +712,64 @@ body {
 
 .dash-actions { display: flex; align-items: center; gap: 10px; }
 
+.dash-timeframe { position: relative; }
+
 .dash-date-label {
   font-family: var(--font-body); font-size: 13px;
   padding: 6px 14px; border-radius: var(--radius-pill);
   background: var(--card-bg); color: var(--text-secondary);
   border: 1px solid var(--border-soft);
 }
+
+.dash-date-btn {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.dash-date-btn:hover { border-color: var(--text-secondary); }
+
+.dash-timeframe-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+  min-width: 220px; padding: 6px 0;
+  background: var(--card-bg); border: 1px solid var(--border-soft);
+  border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+
+.dash-timeframe-item {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 16px; font-size: 13px; font-family: var(--font-body);
+  color: var(--text-primary); background: none; border: none; cursor: pointer;
+  transition: background 0.12s;
+}
+.dash-timeframe-item:hover { background: var(--bg-hover, rgba(0,0,0,.04)); }
+.dash-timeframe-item.active { font-weight: 600; color: var(--accent, #3b82f6); }
+
+.dash-timeframe-divider {
+  height: 1px; margin: 6px 12px;
+  background: var(--border-soft);
+}
+
+.dash-timeframe-custom { padding: 8px 16px 10px; }
+.dash-timeframe-custom-label {
+  display: block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--text-secondary); margin-bottom: 8px;
+}
+.dash-timeframe-custom-inputs {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+}
+.dash-timeframe-date-input {
+  flex: 1; padding: 5px 8px; font-size: 12px; font-family: var(--font-body);
+  border: 1px solid var(--border-soft); border-radius: 6px;
+  background: var(--bg-page, #fff); color: var(--text-primary);
+}
+.dash-timeframe-to { color: var(--text-secondary); font-size: 12px; }
+.dash-timeframe-apply {
+  width: 100%; padding: 6px; font-size: 12px; font-weight: 600;
+  font-family: var(--font-body); border: none; border-radius: 6px;
+  background: var(--text-primary); color: var(--bg-page, #fff); cursor: pointer;
+  transition: opacity 0.15s;
+}
+.dash-timeframe-apply:disabled { opacity: .4; cursor: not-allowed; }
+.dash-timeframe-apply:not(:disabled):hover { opacity: .85; }
 
 .dash-metrics-secondary {
   margin-top: -8px;

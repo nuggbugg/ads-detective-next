@@ -18,13 +18,55 @@ function formatTimeAgo(iso: string) {
   return `${days}d ago`;
 }
 
+type TimeframeOption = "7" | "14" | "30" | "90" | "custom";
+
+function getDateRange(option: TimeframeOption, customFrom?: string, customTo?: string) {
+  if (option === "custom" && customFrom) {
+    return { date_from: customFrom, date_to: customTo || new Date().toISOString().slice(0, 10) };
+  }
+  const days = parseInt(option);
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  return {
+    date_from: from.toISOString().slice(0, 10),
+    date_to: to.toISOString().slice(0, 10),
+  };
+}
+
+const TIMEFRAME_LABELS: Record<TimeframeOption, string> = {
+  "7": "Last 7 days",
+  "14": "Last 14 days",
+  "30": "Last 30 days",
+  "90": "Last 90 days",
+  "custom": "Custom",
+};
+
 export default function DashboardPage() {
-  const data = useQuery(api.dashboard.get, {});
+  const [timeframe, setTimeframe] = useState<TimeframeOption>("30");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [showTimeframeMenu, setShowTimeframeMenu] = useState(false);
+  const timeframeRef = useRef<HTMLDivElement>(null);
+
+  const dateRange = getDateRange(timeframe, customFrom, customTo);
+  const data = useQuery(api.dashboard.get, dateRange);
   const settings = useQuery(api.settings.getAll);
   const fmt = useCurrencyFormatter();
   const fetchSales = useAction(api.shopify.fetchMonthlySales);
   const [refreshing, setRefreshing] = useState(false);
   const autoFetchedRef = useRef(false);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (timeframeRef.current && !timeframeRef.current.contains(e.target as Node)) {
+        setShowTimeframeMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // Auto-fetch sales on mount, and refresh every 10 minutes in the background
   useEffect(() => {
@@ -284,9 +326,61 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="dash-actions">
-              <span className="dash-date-label">
-                Last {settings?.date_range_days || "30"} days
-              </span>
+              <div className="dash-timeframe" ref={timeframeRef}>
+                <button
+                  className="dash-date-label dash-date-btn"
+                  onClick={() => setShowTimeframeMenu((v) => !v)}
+                >
+                  {timeframe === "custom" && customFrom
+                    ? `${customFrom} – ${customTo || "now"}`
+                    : TIMEFRAME_LABELS[timeframe]}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {showTimeframeMenu && (
+                  <div className="dash-timeframe-menu">
+                    {(["7", "14", "30", "90"] as TimeframeOption[]).map((opt) => (
+                      <button
+                        key={opt}
+                        className={`dash-timeframe-item${timeframe === opt ? " active" : ""}`}
+                        onClick={() => { setTimeframe(opt); setShowTimeframeMenu(false); }}
+                      >
+                        {TIMEFRAME_LABELS[opt]}
+                      </button>
+                    ))}
+                    <div className="dash-timeframe-divider" />
+                    <div className="dash-timeframe-custom">
+                      <span className="dash-timeframe-custom-label">Custom range</span>
+                      <div className="dash-timeframe-custom-inputs">
+                        <input
+                          type="date"
+                          value={customFrom}
+                          onChange={(e) => setCustomFrom(e.target.value)}
+                          className="dash-timeframe-date-input"
+                        />
+                        <span className="dash-timeframe-to">–</span>
+                        <input
+                          type="date"
+                          value={customTo}
+                          onChange={(e) => setCustomTo(e.target.value)}
+                          className="dash-timeframe-date-input"
+                        />
+                      </div>
+                      <button
+                        className="dash-timeframe-apply"
+                        disabled={!customFrom}
+                        onClick={() => {
+                          setTimeframe("custom");
+                          setShowTimeframeMenu(false);
+                        }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <span className="dash-goal-badge">{goalLabel}</span>
             </div>
           </div>
