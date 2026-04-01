@@ -10,11 +10,12 @@ export const get = query({
   handler: async (ctx, { date_from, date_to }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return null;
-    let allCreatives = await ctx.db.query("creatives").collect();
+    const allCreatives = await ctx.db.query("creatives").collect();
 
-    // Filter by date range if specified
+    // Date-filtered creatives for performance metrics
+    let dateFilteredCreatives = allCreatives;
     if (date_from || date_to) {
-      allCreatives = allCreatives.filter((c) => {
+      dateFilteredCreatives = allCreatives.filter((c) => {
         const ds = c.date_start || "";
         if (date_from && ds < date_from) return false;
         if (date_to && ds > date_to) return false;
@@ -37,26 +38,26 @@ export const get = query({
       : goal === "traffic" ? "TRAFFIC"
       : "SALES"; // "roas" → OUTCOME_SALES
 
-    const goalCreatives = allCreatives.filter((c) =>
+    const goalCreatives = dateFilteredCreatives.filter((c) =>
       (c.campaign_objective || "").toUpperCase().includes(objectiveFilter)
     );
 
-    // Aggregate metrics — filtered by goal objective
+    // Aggregate metrics — filtered by goal objective AND date range
     const withDelivery = goalCreatives.filter((c) => c.spend > 0);
     const withConversions = withDelivery.filter((c) => c.conversions > 0);
 
     const metrics = {
-      // Summary bar counts are unfiltered (all creatives)
+      // Summary bar counts are UNFILTERED (all creatives, ignoring date range)
       total_creatives: allCreatives.length,
       active_ads: allCreatives.filter((c) => c.ad_status === "ACTIVE").length,
       analyzed_count: allCreatives.filter((c) => c.analysis_status === "completed").length,
       pending_count: allCreatives.filter((c) => c.analysis_status === "pending").length,
-      // Performance metrics are filtered by goal objective
+      // Performance metrics are filtered by goal objective + date range
       filtered_creatives: goalCreatives.length,
       filtered_active: goalCreatives.filter((c) => c.ad_status === "ACTIVE").length,
       with_delivery: withDelivery.length,
       total_spend: goalCreatives.reduce((s, c) => s + c.spend, 0),
-      all_spend: allCreatives.reduce((s, c) => s + c.spend, 0),
+      all_spend: dateFilteredCreatives.reduce((s, c) => s + c.spend, 0),
       total_purchase_value: goalCreatives.reduce((s, c) => s + c.purchase_value, 0),
       avg_roas: (() => {
         const totalSpend = goalCreatives.reduce((s, c) => s + c.spend, 0);
