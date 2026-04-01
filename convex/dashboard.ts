@@ -16,7 +16,8 @@ export const get = query({
     let dateFilteredCreatives = allCreatives;
     if (date_from || date_to) {
       dateFilteredCreatives = allCreatives.filter((c) => {
-        const ds = c.date_start || "";
+        const ds = c.date_start;
+        if (!ds) return true; // include creatives without date_start
         if (date_from && ds < date_from) return false;
         if (date_to && ds > date_to) return false;
         return true;
