@@ -328,8 +328,9 @@ export default function DashboardPage() {
             <div className="dash-actions">
               <div className="dash-timeframe" ref={timeframeRef}>
                 <button
+                  type="button"
                   className="dash-date-label dash-date-btn"
-                  onClick={() => setShowTimeframeMenu((v) => !v)}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowTimeframeMenu((v) => !v); }}
                 >
                   {timeframe === "custom" && customFrom
                     ? `${customFrom} – ${customTo || "now"}`
@@ -343,8 +344,9 @@ export default function DashboardPage() {
                     {(["7", "14", "30", "90"] as TimeframeOption[]).map((opt) => (
                       <button
                         key={opt}
+                        type="button"
                         className={`dash-timeframe-item${timeframe === opt ? " active" : ""}`}
-                        onClick={() => { setTimeframe(opt); setShowTimeframeMenu(false); }}
+                        onClick={(e) => { e.stopPropagation(); setTimeframe(opt); setShowTimeframeMenu(false); }}
                       >
                         {TIMEFRAME_LABELS[opt]}
                       </button>
@@ -368,9 +370,11 @@ export default function DashboardPage() {
                         />
                       </div>
                       <button
+                        type="button"
                         className="dash-timeframe-apply"
                         disabled={!customFrom}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setTimeframe("custom");
                           setShowTimeframeMenu(false);
                         }}
