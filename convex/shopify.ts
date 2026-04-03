@@ -9,6 +9,7 @@ const SHOPIFY_CLIENT_ID = "1eeb3ae5b341187536602380c950b1c1";
 const SHOPIFY_API_VERSION = "2026-01";
 const SHOPIFY_SCOPES = "read_orders,read_products,read_analytics";
 const SALES_GOAL = 500;
+const WEEKLY_GOAL = 125;
 
 // Manual B2B adjustments (orders outside Shopify)
 const MANUAL_B2B_BOXES = 12;
@@ -137,6 +138,13 @@ export const fetchMonthlySales = action({
       timeZone: "UTC",
     });
 
+    // Calculate current week boundaries (Mon-Sun, UTC)
+    const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ...
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - mondayOffset));
+    const weekEnd = new Date(Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate() + 7));
+    const weekLabel = `${weekStart.getUTCDate()} ${weekStart.toLocaleString("en-US", { month: "short", timeZone: "UTC" })} – ${new Date(weekEnd.getTime() - 1).getUTCDate()} ${new Date(weekEnd.getTime() - 1).toLocaleString("en-US", { month: "short", timeZone: "UTC" })}`;
+
     // Fetch orders for current month, paginating through all
     // NOTE: Do NOT use &fields= filter — it strips nested objects like customer.tags
     const baseUrl =
@@ -152,6 +160,14 @@ export const fetchMonthlySales = action({
     let subscriptionOrders = 0;
     let onetimeRevenue = 0;
     let onetimeOrders = 0;
+
+    // Weekly accumulators
+    let weekQuantity = 0;
+    let weekOnlineQuantity = 0;
+    let weekB2bQuantity = 0;
+    let weekOnlineRevenue = 0;
+    let weekB2bRevenue = 0;
+
     let nextUrl: string | null = baseUrl;
 
     while (nextUrl) {
@@ -169,6 +185,7 @@ export const fetchMonthlySales = action({
           id: number;
           tags: string;
           total_price: string;
+          created_at: string;
           source_name?: string;
           customer?: { tags?: string };
           line_items: Array<{
@@ -224,6 +241,19 @@ export const fetchMonthlySales = action({
           onlineQuantity += orderQty;
           onlineRevenue += orderRevenue;
         }
+
+        // Weekly tracking
+        const orderDate = new Date(order.created_at);
+        if (orderDate >= weekStart && orderDate < weekEnd) {
+          weekQuantity += orderQty;
+          if (isB2B) {
+            weekB2bQuantity += orderQty;
+            weekB2bRevenue += orderRevenue;
+          } else {
+            weekOnlineQuantity += orderQty;
+            weekOnlineRevenue += orderRevenue;
+          }
+        }
       }
 
       // Check for pagination via Link header
@@ -245,6 +275,8 @@ export const fetchMonthlySales = action({
     const totalRevenue = onlineRevenue + b2bRevenue;
 
     // Cache the result in settings
+    const weekTotalRevenue = weekOnlineRevenue + weekB2bRevenue;
+
     const cacheData = JSON.stringify({
       sold: totalQuantity,
       b2b: b2bQuantity,
@@ -256,9 +288,18 @@ export const fetchMonthlySales = action({
       subscription_orders: subscriptionOrders,
       onetime_revenue: Math.round(onetimeRevenue),
       onetime_orders: onetimeOrders,
-      mrr: Math.round(subscriptionRevenue), // MRR = subscription revenue this month
+      mrr: Math.round(subscriptionRevenue),
       goal: SALES_GOAL,
       month: monthName,
+      // Weekly data
+      week_sold: weekQuantity,
+      week_online: weekOnlineQuantity,
+      week_b2b: weekB2bQuantity,
+      week_online_revenue: Math.round(weekOnlineRevenue),
+      week_b2b_revenue: Math.round(weekB2bRevenue),
+      week_total_revenue: Math.round(weekTotalRevenue),
+      weekly_goal: WEEKLY_GOAL,
+      week_label: weekLabel,
       last_fetched: new Date().toISOString(),
     });
 
@@ -272,6 +313,10 @@ export const fetchMonthlySales = action({
       onetime_revenue: Math.round(onetimeRevenue), onetime_orders: onetimeOrders,
       mrr: Math.round(subscriptionRevenue),
       goal: SALES_GOAL, month: monthName,
+      week_sold: weekQuantity, week_online: weekOnlineQuantity, week_b2b: weekB2bQuantity,
+      week_online_revenue: Math.round(weekOnlineRevenue), week_b2b_revenue: Math.round(weekB2bRevenue),
+      week_total_revenue: Math.round(weekTotalRevenue),
+      weekly_goal: WEEKLY_GOAL, week_label: weekLabel,
     };
   },
 });
@@ -315,6 +360,15 @@ export const getSalesGoal = query({
         goal: number;
         month: string;
         last_fetched: string;
+        // Weekly data
+        week_sold?: number;
+        week_online?: number;
+        week_b2b?: number;
+        week_online_revenue?: number;
+        week_b2b_revenue?: number;
+        week_total_revenue?: number;
+        weekly_goal?: number;
+        week_label?: string;
       };
     } catch {
       return null;

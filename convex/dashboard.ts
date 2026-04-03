@@ -138,6 +138,9 @@ export const get = query({
       subscription_revenue: number; subscription_orders: number;
       onetime_revenue: number; onetime_orders: number; mrr: number;
       goal: number; month: string; last_fetched: string;
+      week_sold?: number; week_online?: number; week_b2b?: number;
+      week_online_revenue?: number; week_b2b_revenue?: number; week_total_revenue?: number;
+      weekly_goal?: number; week_label?: string;
     } | null = null;
     if (shopifyToken?.value) {
       const cached = await ctx.db

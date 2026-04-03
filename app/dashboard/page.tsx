@@ -179,20 +179,142 @@ export default function DashboardPage() {
         </div>
 
         {/* Sales Goal Progress */}
+        {data.has_shopify && data.sales_goal && data.sales_goal.weekly_goal && (() => {
+          const sg = data.sales_goal;
+          const wSold = sg.week_sold ?? 0;
+          const wOnline = sg.week_online ?? 0;
+          const wB2b = sg.week_b2b ?? 0;
+          const wGoal = sg.weekly_goal!;
+          const wOnlineRev = sg.week_online_revenue ?? 0;
+          const wB2bRev = sg.week_b2b_revenue ?? 0;
+          const wTotalRev = sg.week_total_revenue ?? 0;
+          const wHasRev = wTotalRev > 0;
+          const wOnlinePct = wHasRev
+            ? wTotalRev > 0 ? (wOnlineRev / wTotalRev) * 100 : 100
+            : wSold > 0 ? (wOnline / wSold) * 100 : 100;
+          const wB2bPct = wHasRev
+            ? wTotalRev > 0 ? (wB2bRev / wTotalRev) * 100 : 0
+            : wSold > 0 ? (wB2b / wSold) * 100 : 0;
+          const R = 40;
+          const C = 2 * Math.PI * R;
+          const wOnlineArc = (wOnlinePct / 100) * C;
+          const wB2bArc = (wB2bPct / 100) * C;
+          const fmtKr = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k kr` : `${n} kr`;
+
+          return (
+            <div className="goal-progress">
+              <div className="goal-progress-header">
+                <div className="goal-progress-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                  <span>Weekly Sales Goal</span>
+                  <span className="goal-progress-month">{sg.week_label}</span>
+                </div>
+                <button
+                  className="goal-progress-refresh"
+                  onClick={handleRefreshSales}
+                  disabled={refreshing}
+                  title="Refresh from Shopify"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" className={refreshing ? "spin" : ""}>
+                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+                  </svg>
+                </button>
+              </div>
+              <div className="goal-progress-row">
+                <div className="goal-progress-bar-section">
+                  <div className="goal-progress-bar-container">
+                    <div className="goal-progress-bar-track">
+                      <div
+                        className="goal-progress-bar-fill goal-bar-online"
+                        style={{ width: `${Math.min((wOnline / wGoal) * 100, 100)}%` }}
+                      />
+                      <div
+                        className="goal-progress-bar-fill goal-bar-b2b"
+                        style={{ width: `${Math.min((wB2b / wGoal) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="goal-progress-stats">
+                    <span className="goal-progress-count">
+                      <strong>{wSold}</strong> / {wGoal} boxes
+                    </span>
+                    <span className="goal-progress-pct">
+                      {Math.round((wSold / wGoal) * 100)}%
+                    </span>
+                  </div>
+                  <div className="goal-progress-legend">
+                    <span className="goal-legend-item">
+                      <span className="goal-legend-dot goal-legend-online" />
+                      Online <strong>{wOnline}</strong>
+                    </span>
+                    <span className="goal-legend-item">
+                      <span className="goal-legend-dot goal-legend-b2b" />
+                      B2B <strong>{wB2b}</strong>
+                    </span>
+                  </div>
+                </div>
+                {wSold > 0 && (
+                  <div className="goal-revenue-donut">
+                    <svg viewBox="0 0 100 100" className="donut-chart">
+                      <circle
+                        cx="50" cy="50" r={R}
+                        fill="none"
+                        stroke="var(--accent)"
+                        strokeWidth="12"
+                        strokeDasharray={`${wOnlineArc} ${C - wOnlineArc}`}
+                        strokeDashoffset={C * 0.25}
+                        strokeLinecap="round"
+                      />
+                      {wB2bPct > 0 && (
+                        <circle
+                          cx="50" cy="50" r={R}
+                          fill="none"
+                          stroke="#6c8cff"
+                          strokeWidth="12"
+                          strokeDasharray={`${wB2bArc} ${C - wB2bArc}`}
+                          strokeDashoffset={C * 0.25 - wOnlineArc}
+                          strokeLinecap="round"
+                        />
+                      )}
+                      <text x="50" y="46" textAnchor="middle" className="donut-total-label">
+                        {wHasRev ? "Revenue" : "Boxes"}
+                      </text>
+                      <text x="50" y="58" textAnchor="middle" className="donut-total-value">
+                        {wHasRev ? fmtKr(wTotalRev) : wSold}
+                      </text>
+                    </svg>
+                    <div className="donut-legend">
+                      <span className="donut-legend-item">
+                        <span className="goal-legend-dot goal-legend-online" />
+                        {wHasRev ? fmtKr(wOnlineRev) : `${wOnline} boxes`}{" "}
+                        <span className="donut-legend-pct">({Math.round(wOnlinePct)}%)</span>
+                      </span>
+                      <span className="donut-legend-item">
+                        <span className="goal-legend-dot goal-legend-b2b" />
+                        {wHasRev ? fmtKr(wB2bRev) : `${wB2b} boxes`}{" "}
+                        <span className="donut-legend-pct">({Math.round(wB2bPct)}%)</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
         {data.has_shopify && data.sales_goal && (() => {
           const sg = data.sales_goal;
           const hasRevData = (sg.total_revenue || 0) > 0;
           const totalRev = sg.total_revenue || 0;
           const onlineRev = sg.online_revenue || 0;
           const b2bRev = sg.b2b_revenue || 0;
-          // Use revenue if available, otherwise fall back to box counts
           const onlinePct = hasRevData
             ? totalRev > 0 ? (onlineRev / totalRev) * 100 : 100
             : sg.sold > 0 ? ((sg.online ?? sg.sold) / sg.sold) * 100 : 100;
           const b2bPct = hasRevData
             ? totalRev > 0 ? (b2bRev / totalRev) * 100 : 0
             : sg.sold > 0 ? ((sg.b2b ?? 0) / sg.sold) * 100 : 0;
-          // SVG donut chart params
           const R = 40;
           const C = 2 * Math.PI * R;
           const onlineArc = (onlinePct / 100) * C;
